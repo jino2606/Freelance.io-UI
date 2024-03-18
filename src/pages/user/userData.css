@@ -1,0 +1,35 @@
+.image-icon{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: all 0.25s ease-in-out;
+}
+
+.profile-avatar{
+    background-color: rgba(0, 0, 0, 0);
+    
+}
+
+.avatar{
+    transition: all 0.25s ease-in-out;
+}
+
+.profile-avatar:hover .image-icon{
+    opacity: 100%;
+    background-color: rgba(0, 0, 0, 0.548);
+}
+
+.form-heading {
+    font-size: 1.5em;
+    font-weight: 500;
+}
+
+.form-heading-icon {
+    font-size: 1.2em;
+}
+
+.social-handles a{
+    text-decoration: none;
+}

@@ -1,0 +1,32 @@
+.tab-header{
+    background-color: #4b4b4b;
+}
+
+.tab-option{
+    cursor: pointer;
+}
+
+.tab-option p{
+    font-size: 25px;
+}
+
+.tab-option:hover{
+    background-color: #000000 !important;
+}
+
+.tab-option:hover p{
+    color: #ffff;
+}
+
+.jobpost-tile, .applicants-tile{
+    background-color: #f0f0f0;
+}
+
+
+.task-action{
+
+}
+
+.task-action:active{
+    background-color: #1e7c4f !important;
+}

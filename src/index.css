@@ -1,13 +1,78 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+:root{
+  
+  --background-color: #FFFFFF;
+  --primary-orange:  #FF9966;
+
+  /* Navigation & Text */
+  --primary-text: #333333;
+  --secondary-text: #00FFFF;
+
+  /* Buttons & Call to Actions (CTAs) */
+  --cta-1: #FF9966;
+
+  /* BAnners & Alerts */
+  --blue: #00FFFF;
+
+  /* Accents & Highlights: */
+  --accent-color-1: #FFC125;
+  --accent-color-2: #00C2CF;
+  --accent-color-3: #18e9c6;
+
+  /* Divider */
+  --divider-color: #ADD8E6;
+  --borders: #808080;
+
+  --black: #000000;
+  --dark-gray: #222222;
+  /* --gray:  */
+
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* background-color: #EEE8E5 !important; */
+  font-family: 'DM Sans', sans-serif !important;
+  /* background: rgb(240, 240, 240); */
+  background: rgb(245, 245, 245) !important;
+}
+
+.orange_button{
+  background-color: var(--accent-color-1);
+  border: none !important;
+}
+
+.black_button{
+  background-color: var(--dark-gray) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+}
+
+.black_button:hover{
+  /* background-color: #FFC125 !important;
+  color: var(--background-color) !important; */
+  background-color: #35322f !important;
+  /* color: rgb(255, 255, 255) !important; */
+}
+
+.white_button{
+  background-color: var(--background-color) !important;
+  border: none !important;
+  color: black !important;
+}
+
+.white_button:hover{
+  background-color: rgb(230, 224, 217) !important;
+  color: rgb(0, 0, 0) !important;
+}
+
+.search-button{
+  background-color: var(--accent-color-3);
+  border: none !important;
+  padding: 20px 40px;
 }

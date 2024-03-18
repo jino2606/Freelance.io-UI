@@ -1,0 +1,16 @@
+.cardImage{
+    width: 100%;
+    height: 100%;
+    /* z-index: 1; */
+}
+
+.section-heading{
+
+    font-size: 39px;
+    font-weight: 700;
+
+}
+
+.subtext strong, .headLine span{
+    color: var(--primary-orange);
+}

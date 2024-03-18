@@ -1,0 +1,31 @@
+.landing-banner{
+    background-image: url("../../assets/images/1.png"), url("../../assets/images/2.png") !important;
+    background-repeat: no-repeat;
+    background-repeat: no-repeat;
+    background-size: 167px, 65%;
+    background-position: left bottom, right top; 
+}
+
+.banner-text{
+    font-size: 45px;
+    font-weight: 700;
+}
+
+.search-box{
+    /* border: .1px solid; */
+    /* box-shadow: 0 0 5px var(--accent-color-3); */
+    box-shadow: 0 0 5px var(--accent-color-3); 
+}
+
+.search-box:active{
+    border-color: #007bff;
+}
+    
+.main-search{
+    border: none !important;
+}
+
+.main-search:focus {
+    border: none !important;
+    box-shadow: none !important; /* Optional: Add a box shadow for visual effect */
+  }

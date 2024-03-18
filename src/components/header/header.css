@@ -1,0 +1,27 @@
+@import '../../index.css';
+
+.navigation_bar{
+    /* margin-top: 1em; */
+    z-index: 5000;
+}
+
+.nav-brand{
+    color: var(--primary-orange) !important;
+    font-weight: 800;
+    font-size: 25px !important;
+}
+
+.textNav{
+    color: #ffffff !important;
+  }
+  
+.textNav:hover{
+    /* #FF9966 or #00FFFF */
+    color: rgb(230, 230, 230) !important;
+    /* color: #00FFFF !important; */
+}
+
+.header-loggedin button, .dropdown button{
+    background: none;
+    border: none;
+}
