@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/ContextShare';
 import { getJobPostAPI, requestTaskAPI, deleteRequestAPI } from '../../services/allApis';
@@ -19,7 +19,7 @@ function JobDetails() {
   const stateMap = { 0: 'Open', 1: 'In Progress', 2: 'Closed' };
   const stateStyle = { 0: 'badge-success', 1: 'badge-info', 2: 'badge-danger' };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const res = await getJobPostAPI(jobPostId);
       const data = res.data;
@@ -31,10 +31,12 @@ function JobDetails() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [jobPostId]);
 
-  useEffect(() => { fetchData(); }, [jobPostId]);
-
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  
   const handleRequestTask = async () => {
     setActionLoading(true);
     try {

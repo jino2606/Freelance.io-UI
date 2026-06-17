@@ -21,7 +21,7 @@ function ViewApplicants({ jobPostId, jobState }) {
 
   useEffect(() => {
     if (isOpen) fetchApplicants();
-  }, [isOpen]);
+  }, [isOpen, fetchApplicants]);
 
   const handleUpdate = async (requestId, userId, state) => {
     try {

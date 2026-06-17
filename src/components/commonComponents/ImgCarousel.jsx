@@ -18,7 +18,7 @@ function ImgCarousel({ jobPostData, height = '300px' }) {
     }}>
       <img
         src={`${BASE_URL}/uploads/job/posts/${images[current]?.filename}`}
-        alt={`Job image ${current + 1}`}
+        alt={`Jobimg ${current + 1}`}
         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         loading="lazy"
       />
