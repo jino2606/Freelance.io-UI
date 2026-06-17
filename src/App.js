@@ -1,87 +1,130 @@
-import logo from './logo.svg';
-import './App.css';
-import { Route, Routes, useLocation } from 'react-router-dom';
-import LandingPage from './pages/landingPage/LandingPage';
+import React, { useEffect, lazy, Suspense } from 'react';
+import { Route, Routes, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Header from './components/header/Header';
-import Home from './pages/homePage/Home';
-import Login from './pages/Authentication/Login';
-import SignUp from './pages/Authentication/SignUp';
-import UserData from './pages/user/UserData';
-import { useContext, useEffect, useState } from 'react';
-import { isAuthTokenContext } from './context/ContextShare';
-import Addjobs from './pages/addJobs/Addjobs';
-import JobDetails from './pages/viewJob/JobDetails';
-import ChatWindow from './pages/chatapp/ChatWindow';
-import { io } from "socket.io-client";
-import { BASE_URL } from './services/baseUrl';
+import { useAuth } from './context/ContextShare';
 import socketConnection from './services/socketConnect';
-import Activity from './pages/myActivities/Activity';
 
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+// Lazy-loaded pages
+const LandingPage = lazy(() => import('./pages/landingPage/LandingPage'));
+const Login = lazy(() => import('./pages/Authentication/Login'));
+const SignUp = lazy(() => import('./pages/Authentication/SignUp'));
+const Home = lazy(() => import('./pages/homePage/Home'));
+const UserData = lazy(() => import('./pages/user/UserData'));
+const Addjobs = lazy(() => import('./pages/addJobs/Addjobs'));
+const JobDetails = lazy(() => import('./pages/viewJob/JobDetails'));
+const ChatWindow = lazy(() => import('./pages/chatapp/ChatWindow'));
+const Activity = lazy(() => import('./pages/myActivities/Activity'));
 
-function App() {
+// Route guard
+function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/auth/login" replace />;
+  return children;
+}
 
-  const location = useLocation();
+function GuestRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) return <Navigate to="/home" replace />;
+  return children;
+}
 
-  // Define an array of route paths where you want to render the Header
-  const headerRoutes = ['/home', '/user/profile', '/jobs/addjobs', '/jobs/view/jobdetail', '/user/activity'];
+// Page loader
+function PageLoader() {
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
+      <div className="spinner-lg"></div>
+    </div>
+  );
+}
 
-  // Regular expression to match paths starting with '/user/chats/'
-  const chatRouteRegex = /\/user\/chats\/[A-Za-z0-9]+/i;
-
-  // Check if the current path is in the array of headerRoutes
-  const renderHeader = headerRoutes.includes(location.pathname) /* || chatRouteRegex.test(location.pathname); */
-
-  /* State to store the navbar height and to useit across the app */
-  // const [navHeight, setNavheight] = useState("")
-
-
-  // const socketConnection = () => {
-
-  //   const getCurrentuser = sessionStorage.getItem("loggedInUser")
-  //   console.log("Not Got Current");
-  //   if (getCurrentuser){
-  //       console.log("Got Current shock");
-  //       const currentUser = JSON.parse(getCurrentuser)
-
-  //       // Connect to WebSocket upon successful login
-  //       const socket = io('http://localhost:4000'); // Replace 'http://your-backend-url' with your actual backend URL
-
-  //       socket.on('connect', () => {
-  //         console.log('Connected to server and isAuthToken', currentUser._id);  
-  //         socket.emit("save connectid" , currentUser._id)
-  //       });
-
-  //       // Save socket instance to use throughout the app
-  //       window.socket = socket;
-
-  //       console.log("socket id From Appjs", socket);
-  //     }
-  // };
-
-  useEffect(()=>{
-    socketConnection() /* WHen page loads the connction disconnects so it is made in the app.js */
-  }, [])
-  
-  console.log("Froom App.js");
+function AppLayout({ children, showHeader = true }) {
   return (
     <>
-      {renderHeader && <Header />} {/* setNavheight={setNavheight} */}
-      <Routes>
-        <Route path='/'element={<LandingPage/>}/>
-        <Route path='/auth/login' element={<Login/>}/>
-        <Route path='/auth/signup' element={<SignUp/>}/>
-        <Route path='/home' element={<Home/>}/>
-        <Route path='/user/profile' element={<UserData/>}/>
-        <Route path='/jobs/addjobs' element={<Addjobs/>}/>
-        <Route path='/job/view/jobdetail/:jobPostId' element={<JobDetails/>}/>
-        <Route path='/user/chats/:selectedReceiverId' element={<ChatWindow/>}/> {/*  navHeight={navHeight} */}
-        <Route path='/user/activity' element={<Activity/>}/>
-      </Routes>
-      <ToastContainer position='top-center' theme='colored'/>
+      {showHeader && <Header />}
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
     </>
+  );
+}
 
+function App() {
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      socketConnection();
+    }
+  }, [isAuthenticated]);
+
+  return (
+    <>
+      <Routes>
+        {/* Public */}
+        <Route path="/" element={
+          <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
+        } />
+        <Route path="/auth/login" element={
+          <GuestRoute><Suspense fallback={<PageLoader />}><Login /></Suspense></GuestRoute>
+        } />
+        <Route path="/auth/signup" element={
+          <GuestRoute><Suspense fallback={<PageLoader />}><SignUp /></Suspense></GuestRoute>
+        } />
+
+        {/* Protected */}
+        <Route path="/home" element={
+          <ProtectedRoute><AppLayout><Home /></AppLayout></ProtectedRoute>
+        } />
+        <Route path="/user/profile" element={
+          <ProtectedRoute><AppLayout><UserData /></AppLayout></ProtectedRoute>
+        } />
+        <Route path="/jobs/addjobs" element={
+          <ProtectedRoute><AppLayout><Addjobs /></AppLayout></ProtectedRoute>
+        } />
+        <Route path="/job/view/jobdetail/:jobPostId" element={
+          <ProtectedRoute><AppLayout><JobDetails /></AppLayout></ProtectedRoute>
+        } />
+        <Route path="/user/chats/:selectedReceiverId" element={
+          <ProtectedRoute><AppLayout><ChatWindow /></AppLayout></ProtectedRoute>
+        } />
+        <Route path="/user/activity" element={
+          <ProtectedRoute><AppLayout><Activity /></AppLayout></ProtectedRoute>
+        } />
+
+        {/* 404 */}
+        <Route path="*" element={
+          <AppLayout>
+            <div className="page-wrapper">
+              <div className="container-custom">
+                <div className="empty-state">
+                  <h1>404</h1>
+                  <p className="empty-state-text">Page not found</p>
+                </div>
+              </div>
+            </div>
+          </AppLayout>
+        } />
+      </Routes>
+
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            fontFamily: 'var(--font-sans)',
+            fontSize: '14px',
+            borderRadius: '8px',
+            background: 'var(--bg-elevated)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-secondary)',
+            boxShadow: 'var(--shadow-lg)'
+          },
+          success: { iconTheme: { primary: 'var(--success)', secondary: '#fff' } },
+          error: { iconTheme: { primary: 'var(--danger)', secondary: '#fff' } }
+        }}
+      />
+    </>
   );
 }
 

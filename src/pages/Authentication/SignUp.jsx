@@ -1,122 +1,118 @@
-import React, { useState } from 'react'
-import { Col, Container, Row } from 'react-bootstrap'
-import { NavLink, useNavigate } from 'react-router-dom'
-import loginIMG from '../../assets/images/login/laptop-Cofee.jpg'
-import { userRegister } from '../../services/allApis'
-import { toast } from 'react-toastify'
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { userRegister } from '../../services/allApis';
+import toast from 'react-hot-toast';
+import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 
 function SignUp() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ username: '', firstname: '', lastname: '', email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
-    const navigate = useNavigate()
+  const validate = () => {
+    const errs = {};
+    if (!form.username || form.username.length < 3) errs.username = 'Username must be at least 3 characters';
+    if (!form.firstname) errs.firstname = 'First name is required';
+    if (!form.lastname) errs.lastname = 'Last name is required';
+    if (!form.email) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Enter a valid email';
+    if (!form.password || form.password.length < 6) errs.password = 'Password must be at least 6 characters';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
-    const [userData, setUserData] = useState({
-        username: "",
-        firstname: "",
-        lastname: "",
-        email:"",
-        password: ""
-    })
-    const [error, setError] = useState(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
 
-    console.log(userData);
-
-    const handleRegister = async(e)=>{
-        e.preventDefault()
-
-        const {username, email, password, firstname, lastname} = userData
-        if(!username || !email || !password || !firstname || !lastname){
-            toast.warning("Please Fill the form first")
-        }
-        else{
-          const result = await userRegister(userData)
-          if(result.status === 200){
-            // ${response.data.caption}
-            toast.success(`User Registered Successfully`)
-    
-            /* Empty the form */
-            setUserData({
-              username:"",
-              firstname: "",
-              lastname: "",
-              email:"",
-              password:""
-            })
-    
-            // Navigate to the login page after successful registration
-            navigate('/auth/login')
-          }
-
-          else{
-            // toast.error
-            toast.error(result.response.data)
-          }
-        }
+    try {
+      const result = await userRegister(form);
+      if (result.data?.success) {
+        toast.success('Account created! Please sign in.');
+        navigate('/auth/login');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return (
-        <Container className='d-flex justify-content-center align-items-center' style={{height: '100vh'}}>
-            <Row>
-                <Col lg={6}>
-                    <img className='w-100 h-100' style={{objectFit: 'contain'}} src={loginIMG} alt="" />
-                </Col>
-                <Col lg={6} className='bg-white'>
-                    <div className="auth-wrapper">
-                        <div className="auth-content">
-                            <div className="auth-bg">
-                                <span className="r"/>
-                                <span className="r s"/>
-                                <span className="r s"/>
-                                <span className="r"/>
-                            </div>
-                            <div className="">
-                                <div className="text-center">
-                                    <div className="mb-4">
-                                        <i className="feather icon-user-plus auth-icon"/>
-                                    </div>
-                                    <h3 className="mb-4">Sign up</h3>
-                                    <div className="input-group mb-3">
-                                        <input onChange={(e)=>setUserData({...userData, username:e.target.value})} value={userData.username} type="text" className="form-control" placeholder="Username"/>
-                                    </div>
-                                    
-                                    {/* First And Last Name */}
-                                    <div className='row mb-3'>
-                                        <div className="input-group col">
-                                            <input onChange={(e)=>setUserData({...userData, firstname:e.target.value})} value={userData.firstname} type="text" className="form-control" placeholder="FirstName"/>
-                                        </div>
-                                        <div className="input-group col">
-                                            <input onChange={(e)=>setUserData({...userData, lastname:e.target.value})} value={userData.lastname} type="text" className="form-control" placeholder="Last Name"/>
-                                        </div>
-                                    </div>
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
+  };
 
-                                    {/* Email And Password */}
-                                    <div className='row mb-3'>
-                                        <div className="input-group col">
-                                            <input onChange={(e)=>setUserData({...userData, email:e.target.value})} value={userData.email} type="email" className="form-control" placeholder="Email"/>
-                                        </div>
-                                        <div className="input-group col">
-                                            <input onChange={(e)=>setUserData({...userData, password:e.target.value})} value={userData.password} type="password" className="form-control" placeholder="Password"/>
-                                        </div>
-                                    </div>            
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <Link to="/" className="auth-logo">
+            <span className="logo-dot"></span>
+            Freelance.io
+          </Link>
+          <h1 className="auth-title">Create your account</h1>
+          <p className="auth-subtitle">Start your freelancing journey today</p>
+        </div>
 
-                                     {/* Display error message if there's an error */}
-                                    {error && <p style={{ color: 'red' }}>{error}</p>}
-                                    <div className="form-group text-left">
-                                        <div className="checkbox checkbox-fill d-inline">
-                                            <input type="checkbox" name="checkbox-fill-2" id="checkbox-fill-2"/>
-                                                                                                                {/* DEMO.BLANK_LINK */}
-                                                <label htmlFor="checkbox-fill-2" className="cr">Send me the <a href=""> Newsletter</a> weekly.</label>
-                                        </div>
-                                    </div>
-                                    <button onClick={handleRegister} className="btn btn-primary shadow-2 mb-4">Sign up</button>
-                                    <p className="mb-0 text-muted">Allready have an account? <NavLink to="/auth/login">Login</NavLink></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </Col>
-            </Row>
-        </Container>
-        )
-    }
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
+          <div className="form-group">
+            <label className="form-label-custom" htmlFor="signup-username">Username</label>
+            <input id="signup-username" type="text" name="username" className={`input-custom ${errors.username ? 'input-error' : ''}`}
+              placeholder="johndoe" value={form.username} onChange={handleChange} autoFocus />
+            {errors.username && <p className="form-error">{errors.username}</p>}
+          </div>
 
-export default SignUp
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label-custom" htmlFor="signup-firstname">First name</label>
+              <input id="signup-firstname" type="text" name="firstname" className={`input-custom ${errors.firstname ? 'input-error' : ''}`}
+                placeholder="John" value={form.firstname} onChange={handleChange} />
+              {errors.firstname && <p className="form-error">{errors.firstname}</p>}
+            </div>
+            <div className="form-group">
+              <label className="form-label-custom" htmlFor="signup-lastname">Last name</label>
+              <input id="signup-lastname" type="text" name="lastname" className={`input-custom ${errors.lastname ? 'input-error' : ''}`}
+                placeholder="Doe" value={form.lastname} onChange={handleChange} />
+              {errors.lastname && <p className="form-error">{errors.lastname}</p>}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label-custom" htmlFor="signup-email">Email</label>
+            <input id="signup-email" type="email" name="email" className={`input-custom ${errors.email ? 'input-error' : ''}`}
+              placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
+            {errors.email && <p className="form-error">{errors.email}</p>}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label-custom" htmlFor="signup-password">Password</label>
+            <div className="input-with-icon">
+              <input id="signup-password" type={showPassword ? 'text' : 'password'} name="password"
+                className={`input-custom ${errors.password ? 'input-error' : ''}`}
+                placeholder="Min. 6 characters" value={form.password} onChange={handleChange} autoComplete="new-password" />
+              <button type="button" className="input-icon-btn" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {errors.password && <p className="form-error">{errors.password}</p>}
+          </div>
+
+          <button type="submit" className="btn-primary-custom btn-block btn-lg" disabled={loading}>
+            {loading ? <Loader2 size={18} className="spinning" /> : <>Create account <ArrowRight size={16} /></>}
+          </button>
+        </form>
+
+        <p className="auth-footer">
+          Already have an account? <Link to="/auth/login">Sign in</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default SignUp;

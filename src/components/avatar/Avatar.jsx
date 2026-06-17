@@ -1,32 +1,16 @@
-import React, { useEffect, useState } from 'react'
-import './avatar.css'
-import { useSelector } from 'react-redux'
+import React from 'react';
 
-function Avatar({fontWeight, fontSize, userData}) {
-
-    const [initials, setInitials] = useState()
-    // const userData = useSelector((state)=> state.sessionReducer)
-
-    const getUserInitials = () => {
-
-      if (userData) {
-          const firstLetter = userData.firstname ? userData.firstname[0] : '';
-          const lastLetter = userData.lastname ? userData.lastname[0] : '';
-          setInitials((firstLetter + lastLetter).toUpperCase());
-      }
-    };
-
-    useEffect(()=>{
-        getUserInitials();
-    }, [userData])
+function Avatar({ userData, fontSize = '2rem' }) {
+  const getInitials = () => {
+    if (!userData) return '?';
+    const f = userData.firstname?.[0] || userData.username?.[0] || '';
+    const l = userData.lastname?.[0] || '';
+    return `${f}${l}`.toUpperCase() || '?';
+  };
 
   return (
-    <>
-      <div className='avatar text-white' style={{fontWeight: fontWeight, fontSize: fontSize}}>
-        {initials}
-      </div>
-    </>
-  )
+    <span style={{ fontSize, fontWeight: 600 }}>{getInitials()}</span>
+  );
 }
 
-export default Avatar
+export default Avatar;

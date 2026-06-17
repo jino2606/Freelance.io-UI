@@ -1,169 +1,104 @@
-import React, { useEffect, useState } from 'react'
-import { Button, Modal } from 'react-bootstrap'
-import UserAvatar from '../../components/avatar/UserAvatar';
-import { getRequestedUsers, updateUserJobState } from './activityApis';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getRequestedUsersAPI, updateRequestAPI } from '../../services/allApis';
+import UserAvatar from '../../components/avatar/UserAvatar';
+import toast from 'react-hot-toast';
+import { Users, MessageSquare, UserPlus, CheckCircle, X } from 'lucide-react';
 
-import Payment from '../../components/payment/Payment'
+function ViewApplicants({ jobPostId, jobState }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [applicants, setApplicants] = useState([]);
 
+  const fetchApplicants = async () => {
+    setLoading(true);
+    try {
+      const res = await getRequestedUsersAPI(jobPostId);
+      setApplicants(res.data?.applicants || res.data || []);
+    } catch (err) { /* silent */ }
+    finally { setLoading(false); }
+  };
 
-function MyVerticallyCenteredModal(props) {
+  useEffect(() => {
+    if (isOpen) fetchApplicants();
+  }, [isOpen]);
 
-    const [loading, setLoading] = useState(true);
-    const [requestedUsers, setRequestedUsers] = useState([])
-
-    const {jobPostId, jobState, show, onHide} = props
-    console.log("this is the jobPostId", jobPostId);
-
-    const handleModalLoad = async()=>{
-        console.log("Inside the Modal load");
-        try {
-
-            const token = sessionStorage.getItem("token")
-            if(token){
-                var reqHeader = {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` /* send token back as authorization */
-                }
-            }
-
-            const response = await getRequestedUsers(jobPostId, reqHeader)
-            setRequestedUsers(response.data)
-            console.log("Job Requested user", response.data);
- 
-        } catch (error) {
-            console.error('Error fetching other data:', error);
-        } finally {
-            setLoading(false);
-        }
-
+  const handleUpdate = async (requestId, userId, state) => {
+    try {
+      await updateRequestAPI({ requestId, requestedUserId: userId, jobPostId, state });
+      toast.success('Updated successfully');
+      fetchApplicants();
+    } catch (err) {
+      toast.error('Update failed');
     }
+  };
 
+  return (
+    <>
+      <button className="btn-primary-custom btn-sm" onClick={() => setIsOpen(true)}>
+        <Users size={14} /> Applicants
+      </button>
 
-    useEffect(()=>{
-        console.log("Thsi si Show", show);
-        if(show){ /* Only to load data if modal is open */
-            handleModalLoad() 
-        }
-    }, [show])
+      {isOpen && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Applicants</h3>
+              <button className="btn-icon" onClick={() => setIsOpen(false)}><X size={18} /></button>
+            </div>
 
-    const handleUpdateState = async(id, requestedUserId, jobPostId, state)=>{
-        console.log("Inside handleHire");
-        try {
-
-            const token = sessionStorage.getItem("token")
-            if(token){
-                var reqHeader = {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` /* send token back as authorization */
-                }
-            }
-
-            const payload = {
-                requestId: id,
-                state,
-                requestedUserId,
-                jobPostId
-            }
-
-            const response = await updateUserJobState(payload, reqHeader)
-
-            onHide()
-
-            // setRequestedUsers(response.data)
-            console.log("Updated user", response.data);
- 
-        } catch (error) {
-            console.error('Error Updating state:', error);
-        }
-    }
-
-    return (
-      <Modal
-        {...props}
-        
-        aria-labelledby="contained-modal-title-vcenter"
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title id="contained-modal-title-vcenter">
-            Applicants
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className='overflow-y-scroll' style={{maxHeight: '80vh'}}> {/* d-flex align-items-center justify-content-between */}
-
-            {
-                requestedUsers?.length>0 ?
-                requestedUsers?.map((data, index) =>(
-                    <div className='d-flex mb-2'>
-                        <div className='jobpost-tile py-4 w-75'>
-                            <div className='ms-2 d-flex align-items-center'>
-                                <UserAvatar userData={data.user[0]} heightxwidth={5} fontSize={'30px'}/> {/* userData, heightxwidth, fontSize */}
-                                <h3 className='ms-3'>{data.user[0].username}</h3>
-                            </div>
-                
-                            <div className='mt-4 ms-2 d-flex w-75 justify-content-start'>
-                                <Button variant="primary" size="sm" className='me-4'><i className="fa-solid fa-user me-2"></i> View User </Button>{' '}
-                                {/* style={{ pointerEvents: loggedinUser?._id === userData?._id?'none': 'auto'}}  aria-disabled={loggedinUser?._id === userData?._id}*/}
-                                <Link to={`/user/chats/${data.user[0]._id}`} >
-                                    <Button variant="warning" size="sm"><i className="fa-solid fa-message me-2"></i>Chat</Button>{' '}
-                                </Link>
-                            </div>
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                {[1,2].map(i => <div key={i} className="skeleton" style={{ height: '60px' }}></div>)}
+              </div>
+            ) : applicants.length === 0 ? (
+              <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
+                <Users size={36} className="empty-state-icon" />
+                <h3 className="empty-state-title">No applicants yet</h3>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                {applicants.map((app) => {
+                  const appUser = app.user?.[0] || {};
+                  return (
+                    <div key={app._id} className="card-custom" style={{ padding: 'var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                        <UserAvatar userData={appUser} heightxwidth={2.5} fontSize="14px" />
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0, fontSize: 'var(--text-sm)' }}>{appUser.username || 'User'}</p>
+                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>
+                            {appUser.firstname} {appUser.lastname}
+                          </p>
                         </div>
-        
-                        <div className='w-25  text-light fw-bolder fs-5 text-wrap text-center'
-                            style={{cursor: 'pointer'}}>
-        
-                            {
-                                data.state === 0 ? <div className='bg-success w-100 h-100 p-2 align-items-center d-flex justify-content-center task-action'
-                                                        onClick={()=>handleUpdateState(data._id, data.user[0]._id, data.jobPostId, 1)}> {/* To update to (1) means to Engaged state */}
-                                                        <p className='m-0 align-middle'><i className="fa-brands fa-get-pocket me-2 "></i>Hire</p>
-                                                    </div>:
-
-                                data.state === 1 ? <div className='bg-info w-100 h-100 p-2 align-items-center d-flex justify-content-center task-action'
-                                                        onClick={()=>handleUpdateState(data._id, data.user[0]._id, data.jobPostId, 2)}> {/* To update to (2) means to Finished state */}
-                                                        <Payment />
-                                                    </div>:
-                                data.state === 2 && <div className='bg-success w-100 h-100 p-2 align-items-center d-flex justify-content-center task-action'>
-                                                        <p className='m-0 align-middle'><i className="fa-solid fa-check me-2"></i>Finished</p>
-                                                    </div>
-                            }
-                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                        <Link to={`/user/chats/${appUser._id}`} className="btn-ghost btn-sm">
+                          <MessageSquare size={14} />
+                        </Link>
+                        {app.state === 0 && (
+                          <button className="btn-success-custom btn-sm" onClick={() => handleUpdate(app._id, appUser._id, 1)}>
+                            <UserPlus size={14} /> Hire
+                          </button>
+                        )}
+                        {app.state === 1 && (
+                          <button className="btn-primary-custom btn-sm" onClick={() => handleUpdate(app._id, appUser._id, 2)}>
+                            <CheckCircle size={14} /> Complete
+                          </button>
+                        )}
+                        {app.state === 2 && (
+                          <span className="badge-custom badge-success"><CheckCircle size={12} /> Done</span>
+                        )}
+                      </div>
                     </div>
-                )): <div>
-                        <h2 className='text-center'>No Job Requests</h2>
-                    </div>
-            }
-        </Modal.Body>
-        <Modal.Footer>
-          <Button onClick={onHide}>Close</Button>
-        </Modal.Footer>
-      </Modal>
-    );
-  }
-
-function ViewApplicants({jobPostId, jobState}) {
-
-    const [modalShow, setModalShow] = useState(false);
-
-    console.log("this is the jobPostId In First", jobPostId);
-
-    return (
-        <>
-            {/* <Button variant="primary" onClick={() => setModalShow(true)}>
-                Launch vertically centered modal
-            </Button> */}
-
-            <Button variant="success" size="sm" onClick={() => setModalShow(true)}>View Applicants</Button>{' '}
-
-            <MyVerticallyCenteredModal
-            show={modalShow}
-            onHide={() => setModalShow(false)}
-            jobPostId={jobPostId}
-            jobState={jobState}
-            />
-        </>
-    )
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
-export default ViewApplicants
+export default ViewApplicants;

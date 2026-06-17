@@ -1,52 +1,32 @@
-import { BASE_URL } from "./baseUrl"
-import { commomAPI } from "./commonApi"
+import api from './commonApi';
+import { API_URL } from './baseUrl';
 
+// Auth
+export const userRegister = (data) => api.post(`${API_URL}/user/register`, data);
+export const userLogin = (data) => api.post(`${API_URL}/user/login`, data);
+export const userLogout = () => api.put(`${API_URL}/user/logout`);
 
-/* user register api*/
-export const userRegister = async(reqBody)=>{
-    console.log("called");
-    return await commomAPI('POST', `${BASE_URL}/user/register`, reqBody, "")  
-}
+// User
+export const updateProfileAPI = (data) => api.put(`${API_URL}/user/update`, data, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
+export const getUser = (id) => api.get(`${API_URL}/user/${id}`);
 
-/* user login api*/
-export const userLogin = async(reqBody)=>{
-    return await commomAPI('POST', `${BASE_URL}/user/login`, reqBody, "")  
-}
+// Job Posts
+export const getJobPostsAPI = (params = {}) => api.get(`${API_URL}/job/post`, { params });
+export const getJobPostAPI = (id) => api.get(`${API_URL}/job/post/data/${id}`);
+export const createJobPostAPI = (data) => api.post(`${API_URL}/job/post`, data, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
+export const getCurrentUserJobPostsAPI = () => api.get(`${API_URL}/job/post/currentuser`);
+export const getMyWorksAPI = () => api.get(`${API_URL}/job/post/myworks`);
 
-//user logout
-export const userLogout = async(reqHeader)=>{
-    return await commomAPI("PUT",`${BASE_URL}/user/logout`,"",reqHeader)
-}
+// Job Requests
+export const requestTaskAPI = (data) => api.post(`${API_URL}/job/request-task`, data);
+export const updateRequestAPI = (data) => api.put(`${API_URL}/job/post/updaterequest`, data);
+export const deleteRequestAPI = (id) => api.delete(`${API_URL}/job/delete-task/${id}`);
+export const getRequestedUsersAPI = (jobPostId) => api.get(`${API_URL}/job/post/requesteduser/${jobPostId}`);
 
-//profile update
-export const updateProfileAPI = async(reqBody,reqHeader)=>{
-    return await commomAPI("PUT",`${BASE_URL}/user/update`,reqBody,reqHeader)
-}
-
-export const getUser = async (id, reqHeader)=>{
-    return await commomAPI("GET",`${BASE_URL}/user/${id}`,"", reqHeader)
-}
-
-
-
-
-/* add project api*/
-export const addProjects = async(reqBody, reqHeader)=>{
-    return await commomAPI('POST', `${BASE_URL}/projects/add`, reqBody, reqHeader)  
-}
-
-/* get home project api*/
-export const homeProjects = async()=>{
-    return await commomAPI('GET', `${BASE_URL}/projects/homeProjects`)  
-}
-
-/* get all project api*/
-export const allProjects = async(searchKey, reqHeader)=>{ /* passing a query param search key as param*/
-    /* query parameter = path?key=value */
-    return await commomAPI('GET', `${BASE_URL}/projects/allProjects?search=${searchKey}`, "", reqHeader)  
-}
-
-/* get user specified projects */
-export const getUserProject = async(reqHeader)=>{
-    return await commomAPI('GET', `${BASE_URL}/projects/userProjects`, "", reqHeader)
-}
+// Chat
+export const getMessagesAPI = (senderId, receiverId) => api.get(`${API_URL}/chats/${senderId}/${receiverId}`);
+export const getChatPreviewAPI = (userId) => api.get(`${API_URL}/user/contacted/${userId}`);

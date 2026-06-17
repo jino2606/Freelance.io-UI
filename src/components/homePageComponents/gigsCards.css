@@ -1,11 +1,1 @@
-  .skill-sec{
-    max-height: 3.2rem;
-    overflow: hidden;
-  }    
-  .skill {
-    margin-right: 8px !important;
-    margin-bottom: 8px !important;
-    overflow: hidden;
-    text-overflow: ellipsis !important;
-    text-decoration: none;
-  } 
+/* GigsCard styles - handled by design system */

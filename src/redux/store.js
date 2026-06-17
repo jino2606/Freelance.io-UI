@@ -1,14 +1,10 @@
-import { configureStore } from "@reduxjs/toolkit";
-import sessionSlice from "./slices/sessionSlice";
-import getPostsSlice from "../pages/homePage/getPostsSlice";
-import sessionUpdaterSlice from "./slices/sessionUpdaterSlice";
+import { configureStore } from '@reduxjs/toolkit';
+import getPostsSlice from '../pages/homePage/getPostsSlice';
 
 const store = configureStore({
-    reducer:{
-        sessionReducer:sessionSlice,
-        jobPostReducer:getPostsSlice,
-        sessionUpdateReducer:sessionUpdaterSlice
-    }
-})
+  reducer: {
+    jobPostReducer: getPostsSlice
+  }
+});
 
-export default store
+export default store;

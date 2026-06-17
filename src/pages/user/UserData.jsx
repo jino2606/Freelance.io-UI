@@ -1,322 +1,181 @@
-import React, { useEffect, useState } from 'react'
-import { Button, Col, Container, Form, Row } from 'react-bootstrap';
-import Avatar from '../../components/avatar/Avatar';
-import './userData.css'
-import CoverImg from './CoverImg';
-import { setCurrentUser } from '../../redux/slices/sessionSlice';
-import { useDispatch, useSelector } from 'react-redux';
-import ProfileImg from './ProfileImg';
+import React, { useState } from 'react';
+import { useAuth } from '../../context/ContextShare';
 import { updateProfileAPI } from '../../services/allApis';
 import { BASE_URL } from '../../services/baseUrl';
-import { toast } from 'react-toastify';
-
-/* This is the Profile page */
+import toast from 'react-hot-toast';
+import { Camera, Edit3, Save, X, MapPin, Briefcase, GraduationCap, ExternalLink, Globe, Loader2 } from 'lucide-react';
 
 function UserData() {
+  const { user, updateUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({ ...user });
+  const [profileImg, setProfileImg] = useState(null);
+  const [imgPreview, setImgPreview] = useState('');
 
-  const [isProfileEdit, setIsProfileEdit] = useState(false)
-  const [token, setToken] = useState("")
-
-  /* for the preview Url */
-  const [imgURL, setImgURL] = useState("");
-
-  /* for the profileImage File */
-  const [profileImg, setProfileImg] = useState();
-
-  const dispatch = useDispatch()
-
-  const userData = useSelector((state)=> state.sessionReducer)
-
-  const getSession = ()=>{
-    if (sessionStorage.getItem("loggedInUser")){
-      const currentUser = JSON.parse(sessionStorage.getItem("loggedInUser"))
-      dispatch(setCurrentUser(currentUser))
-    }
-  }
-
-  const handleUserProfile = ()=>{
-    setIsProfileEdit(true)
-  }
-
-  const handleCancel = ()=>{
-    /* To again fetch new data while clearing the form which the user typed */
-    getSession()
-
-    /* to set the for non editable type (disabled) */
-    setIsProfileEdit(false)
-  }
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    dispatch(setCurrentUser({ ...userData, [name]: value }));
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = async(e)=>{
-    e.preventDefault()
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setProfileImg(file);
+    setImgPreview(URL.createObjectURL(file));
+    setIsEditing(true);
+  };
 
-    if (!profileImg){
-      setProfileImg(userData.profileImg[0])
-    }
+  const handleCancel = () => {
+    setFormData({ ...user });
+    setProfileImg(null);
+    setImgPreview('');
+    setIsEditing(false);
+  };
 
-
-    // const {username,firstname,lastname,email,password,github,linkedin,profile,address1,address2,city,state,zipcode,profileImg} = userData
-
-    /* if there is any uploading comtents from the system we should send the body in the for of form data */
-    /* create object for form data */
-    const reqBody = new FormData()
-
-    /* add data to the form data */
-    // Append userData directly to reqBody
-    Object.entries(userData).forEach(([key, value]) => {
-      reqBody.append(key, value);
-    });
-    
-    reqBody.append("profileImg", profileImg)
-
-    if(token){
-        /* create request header */
-        var reqHeader = {
-            "Content-Type": "multipart/form-data",
-            "Authorization": `Bearer ${token}` /* send token back as authorization */
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const body = new FormData();
+      Object.entries(formData).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && key !== 'profileImg' && key !== '_id' && key !== '__v' && key !== 'createdAt' && key !== 'updatedAt' && key !== 'contactedUsers') {
+          body.append(key, val);
         }
+      });
+      if (profileImg) body.append('profileImg', profileImg);
 
+      const res = await updateProfileAPI(body);
+      const updated = res.data?.user || res.data;
+      if (updated) {
+        updateUser(updated);
+        setFormData({ ...updated });
+        toast.success('Profile updated');
+        setIsEditing(false);
+        setImgPreview('');
+        setProfileImg(null);
+      }
+    } catch (err) {
+      toast.error('Update failed');
+    } finally {
+      setSaving(false);
     }
+  };
 
-    const result = await updateProfileAPI(reqBody, reqHeader)
-    console.log("Update results", result.data);
-    if(result.status === 200){
-        toast.success("User Updated Successfully")
-        // handleClose()
+  const getInitials = () => {
+    return `${(user?.firstname?.[0] || '').toUpperCase()}${(user?.lastname?.[0] || '').toUpperCase()}`;
+  };
 
-        /* updating the current session */
-        sessionStorage.setItem("loggedInUser", JSON.stringify(result.data))
-        getSession()
-        setIsProfileEdit(false)
-    }
-    else{
-      toast.success(result.response.data)
-    }
-}
+  const avatarSrc = imgPreview || (user?.profileImg?.length > 0 && user.profileImg[0]?.filename
+    ? `${BASE_URL}/uploads/${user.profileImg[0].filename}` : null);
 
-  console.log("arra tester", userData);
-  useEffect(()=>{
-    getSession()/* To store user data to redux */
-    setToken(sessionStorage.getItem('token'))
-  }, [])
-
+  const Field = ({ label, name, type = 'text', placeholder, icon, disabled }) => (
+    <div className="form-group">
+      <label className="form-label-custom">{icon} {label}</label>
+      <input className="input-custom" type={type} name={name} placeholder={placeholder}
+        value={formData?.[name] || ''} onChange={handleChange} disabled={disabled || !isEditing} />
+    </div>
+  );
 
   return (
-    <Container fluid className='position-relative'>
-      <div className='position-relative' style={{height: '320px'}}> 
-        <CoverImg /> {/* Component for Cover Image */}
-      </div>
-
-      {/* More Data */}
-      <Container className='position-absolute top-100 start-50 translate-middle'>
-        <Row className='bg-light rounded p-3 shadow'>
-          <Col lg={6} className=''>
-              <div lg={6} className='position-relative rounded-circle bg-primary border border-light-4 border-4 d-flex justify-content-center align-items-center overflow-hidden profile-avatar' style={{height: '15rem', width: '15rem'}}>
-                <div className='h-100 w-100'>
-                  {
-                    imgURL || userData?.profileImg.length>0?
-                    <img src={imgURL?imgURL:`${BASE_URL}/uploads/${userData.profileImg[0].filename}`} alt="" className='w-100 object-fit-cover position-center' />:
-                    <Avatar fontWeight={'400'} fontSize={'6rem'} userData={userData}/>
-                  }
-                  
-                </div>
-
-                <div className='image-icon h-100 w-100 d-flex justify-content-center align-items-center'>
-                  <ProfileImg setImgURL={setImgURL} imgURL={imgURL} setProfileImg={setProfileImg} setIsProfileEdit={setIsProfileEdit}/>
-                </div>
-                
-              </div >
-          </Col>
-
-          <Col lg={6} className='text-end pt-4'>
-              <h5 className='me-2'>
-                {`${userData?.firstname} ${userData?.lastname}`}
-                {/* <span className="font-weight-light">, 35</span> */}
-              </h5>
-
-              <div className="font-weight-300 d-flex justify-content-end">
-                <h6 className={!userData?.city && 'fst-italic'}>{`${userData?.city?userData.city: "City"}, ${userData?.state?userData.state: "state"}`}</h6> 
-                <div className='d-flex justify-content-center' style={{width: '2rem'}}>
-                  <i className="fa-solid fa-location-dot"></i>
-                </div>
-              </div>
-
-              <div className="mt-4 d-flex justify-content-end">
-
-                <h6 className={!userData?.jobTitle && 'fst-italic'}>{userData?.jobTitle? userData.jobTitle: "Current Job Title" }</h6>
-
-                <div className='d-flex justify-content-center' style={{width: '2rem'}}>
-                  <i className="fa-solid fa-briefcase"></i>
-                </div>
-              </div>
-              
-              <div className="mt-4 d-flex justify-content-end">
-                <p className={!userData?.education && 'fst-italic'}>{userData?.education? userData.education: "Add Institution of Study" }</p>
-                <div className='d-flex justify-content-center' style={{width: '2rem'}}>
-                  <i className="fa-solid fa-graduation-cap"></i>
-                </div>
-              </div>
-
-            <div className='me-2 mt-4 social-handles'>
-              <a href={userData?.github} target='_blank' type='button'> <i className="fa-brands fa-square-github fa-2x me-3"></i></a>   
-              <a href={userData?.linkedin} target='_blank'> <i className="fa-brands fa-linkedin fa-2x me-3"></i></a>
-              <a href={userData?.profile} target='_blank'> <i className="fa-solid fa-image-portrait fa-2x"></i></a>
+    <div className="page-wrapper">
+      <div className="container-custom" style={{ maxWidth: '800px' }}>
+        {/* Profile Header */}
+        <div className="card-custom" style={{ marginBottom: 'var(--space-6)', textAlign: 'center', paddingTop: 'var(--space-10)', paddingBottom: 'var(--space-10)' }}>
+          <div style={{ position: 'relative', display: 'inline-block', marginBottom: 'var(--space-5)' }}>
+            <div className="avatar avatar-2xl">
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="Profile" />
+              ) : getInitials()}
             </div>
-            
-          </Col> 
-        </Row>
+            <label style={{
+              position: 'absolute', bottom: '2px', right: '2px', width: '32px', height: '32px',
+              borderRadius: '50%', background: 'var(--accent)', color: '#fff', border: '3px solid var(--bg-elevated)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+            }}>
+              <Camera size={14} />
+              <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+            </label>
+          </div>
 
-        <Container className='p-5 shadow rounded position-absolute top-100 start-50 translate-middle-x forms-container'>
-          <Form>
-            {/* <div className='d-flex justify-content-between align-items-center mb-3'> */}
-              <p className='form-heading'>USER PROFILE</p>
-            {/* </div> */}
+          <h2 style={{ marginBottom: 'var(--space-1)' }}>{user?.firstname} {user?.lastname}</h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>@{user?.username}</p>
 
-              <Row className="mb-3">
-                <Form.Group as={Col} controlId="formGridUserName">
-                  <Form.Label>UserName</Form.Label>
-                  <Form.Control disabled={!isProfileEdit} type="text" placeholder="Enter username" name='username' value={userData?.username} onChange={handleInputChange}/>
-                </Form.Group>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-6)', marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+            {user?.city && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}><MapPin size={14} /> {user.city}{user.state ? `, ${user.state}` : ''}</span>}
+            {user?.jobTitle && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}><Briefcase size={14} /> {user.jobTitle}</span>}
+            {user?.education && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}><GraduationCap size={14} /> {user.education}</span>}
+          </div>
 
-                <Form.Group as={Col} controlId="formGridFirstName">
-                  <Form.Label>FirstName</Form.Label>
-                  <Form.Control disabled={!isProfileEdit} type="text" placeholder="Enter firstname" name='firstname' value={userData?.firstname} onChange={handleInputChange}/>
-                </Form.Group>
+          {/* Social Links */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+            {user?.github && <a href={user.github} target="_blank" rel="noopener noreferrer" className="btn-icon"><ExternalLink size={18} /></a>}
+            {user?.linkedin && <a href={user.linkedin} target="_blank" rel="noopener noreferrer" className="btn-icon"><ExternalLink size={18} /></a>}
+            {user?.profile && <a href={user.profile} target="_blank" rel="noopener noreferrer" className="btn-icon"><Globe size={18} /></a>}
+          </div>
+        </div>
 
-                <Form.Group as={Col} controlId="formGridLastName">
-                  <Form.Label>LastName</Form.Label>
-                  <Form.Control disabled={!isProfileEdit} type="text" placeholder="Enter lastname" name='lastname' value={userData?.lastname} onChange={handleInputChange}/>
-                </Form.Group>
-              </Row>
+        {/* Edit Controls */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+          {!isEditing ? (
+            <button className="btn-primary-custom" onClick={() => setIsEditing(true)}><Edit3 size={15} /> Edit Profile</button>
+          ) : (
+            <>
+              <button className="btn-secondary-custom" onClick={handleCancel}><X size={15} /> Cancel</button>
+              <button className="btn-success-custom" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 size={15} className="spinning" /> : <><Save size={15} /> Save</>}
+              </button>
+            </>
+          )}
+        </div>
 
-              <Row className="mb-3">
-                <Form.Group as={Col} controlId="formGridEmail">
-                  <Form.Label>Email</Form.Label>
-                  <Form.Control disabled={!isProfileEdit} type="email" placeholder="Enter email" name='email' value={userData?.email} onChange={handleInputChange}/>
-                </Form.Group>
-  
-                <Form.Group as={Col} controlId="formGridPassword">
-                  <Form.Label>Password</Form.Label>
-                  <Form.Control disabled={!isProfileEdit} type="password" placeholder="Password" name='password' value={userData?.password} onChange={handleInputChange}/>
-                </Form.Group>
-              </Row>
-          </Form>
+        {/* Personal Info */}
+        <div className="card-custom" style={{ marginBottom: 'var(--space-6)' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-5)' }}>Personal Information</h3>
+          <div className="grid grid-cols-3">
+            <Field label="Username" name="username" placeholder="Username" />
+            <Field label="First Name" name="firstname" placeholder="First name" />
+            <Field label="Last Name" name="lastname" placeholder="Last name" />
+          </div>
+          <Field label="Email" name="email" type="email" placeholder="Email" />
+        </div>
 
-          
-          <Form className='mt-5'>
-            <p className='form-heading'>Professional Information</p>
+        {/* Professional */}
+        <div className="card-custom" style={{ marginBottom: 'var(--space-6)' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-5)' }}>Professional</h3>
+          <div className="grid grid-cols-2">
+            <Field label="Job Title" name="jobTitle" placeholder="Your profession" />
+            <Field label="Education" name="education" placeholder="College / University" />
+          </div>
+          <div className="form-group">
+            <label className="form-label-custom">About</label>
+            <textarea className="textarea-custom" name="userDescription" placeholder="Tell us about yourself..."
+              value={formData?.userDescription || ''} onChange={handleChange} disabled={!isEditing} />
+          </div>
+        </div>
 
-            <Row className="mb-3">
-              <Form.Group as={Col} controlId="formGridJobTitle">
-                <Form.Label>Current Job Title</Form.Label>
-                <Form.Control disabled={!isProfileEdit} type="text" placeholder="What is your profession?" name='jobTitle' value={userData?.jobTitle} onChange={handleInputChange}/>
-              </Form.Group>
+        {/* Social Links */}
+        <div className="card-custom" style={{ marginBottom: 'var(--space-6)' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-5)' }}>Social Links</h3>
+          <div className="grid grid-cols-3">
+            <Field label="GitHub" name="github" placeholder="GitHub URL" />
+            <Field label="LinkedIn" name="linkedin" placeholder="LinkedIn URL" />
+            <Field label="Portfolio" name="profile" placeholder="Portfolio URL" />
+          </div>
+        </div>
 
-              <Form.Group as={Col} controlId="formGridEducation">
-                <Form.Label>Institution of Study</Form.Label>
-                <Form.Control disabled={!isProfileEdit} type='text' placeholder='College/University' name='education' value={userData?.education} onChange={handleInputChange}/>
-              </Form.Group>
-            </Row>
-            <Row>
-              <Form.Group as={Col} controlId="formGridDescription">
-                <Form.Label>Tell Us About You</Form.Label>
-                <Form.Control disabled={!isProfileEdit} as='textarea' placeholder='Tell us about any hobbies, additional expertise, or anything else you’d like to add.' name='userDescription' value={userData?.userDescription} onChange={handleInputChange}/>
-              </Form.Group>
-            </Row>
-          </Form>
-
-          <Form className='mt-5'>
-            {/* <div className='d-flex justify-content-start align-items-end mb-3'>
-              <p className='form-heading m-0'>Connect with Me</p>
-              <Button variant='' className='h-100 pt-0' onClick={{}}>
-                <i className='w-100 text-primary fa-regular fa-pen-to-square'></i>
-              </Button>
-            </div> */}
-            <p className='form-heading'>Connect with Me</p>
-            <Row className="mb-3">
-              <Form.Group as={Col} controlId="formGridGithub">
-                <Form.Label><i className="fa-brands fa-square-github me-2"></i>Github</Form.Label>
-                <Form.Control disabled={!isProfileEdit} type="link" placeholder="Paste Github Link" name='github' value={userData?.github} onChange={handleInputChange}/>
-              </Form.Group>
-
-              <Form.Group as={Col} controlId="formGridLinkedin">
-                <Form.Label><i className="fa-brands fa-linkedin me-2"></i>Linkedin</Form.Label>
-                <Form.Control disabled={!isProfileEdit} type="link" placeholder="Paste Linkedin Link" name='linkedin' value={userData?.linkedin} onChange={handleInputChange}/>
-              </Form.Group>
-
-              <Form.Group as={Col} controlId="formGridPortfolio">
-                <Form.Label><i className="fa-solid fa-image-portrait me-2"></i>Portfolio</Form.Label>
-                <Form.Control disabled={!isProfileEdit} type="link" placeholder="Paste Portfolio Link" name='profile' value={userData?.profile} onChange={handleInputChange}/>
-              </Form.Group>
-            </Row>
-          </Form>
-
-
-          <Form className='mt-5'>
-              <p className='form-heading '>CONTACT INFORMATION</p>
-
-              <Form.Group className="mb-3" controlId="formGridAddress1">
-                <Form.Label>Address 1</Form.Label>
-                <Form.Control disabled={!isProfileEdit} value={userData?.address1} placeholder="1234 Main St" type="text" name='address1' onChange={handleInputChange}/>
-              </Form.Group>
-  
-              <Form.Group className="mb-3" controlId="formGridAddress2">
-                <Form.Label>Address 2</Form.Label>
-                <Form.Control disabled={!isProfileEdit} placeholder="Apartment, studio, or floor" type="text" name='address2' value={userData?.address2} onChange={handleInputChange}/>
-              </Form.Group>
-  
-              <Row className="mb-3">
-                <Form.Group as={Col} controlId="formGridCity">
-                  <Form.Label>City</Form.Label>
-                  <Form.Control disabled={!isProfileEdit} placeholder='City Name' type="text" name='city' value={userData?.city} onChange={handleInputChange}/>
-                </Form.Group>
-  
-                <Form.Group as={Col} controlId="formGridState">
-                  <Form.Label>State</Form.Label>
-                  {/* <Form.Select defaultValue="Choose...">
-                    <option>Choose...</option>
-                    <option>...</option>
-                  </Form.Select> */}
-                  <Form.Control disabled={!isProfileEdit} placeholder='State Name' type="text" name='state' value={userData?.state} onChange={handleInputChange}/>
-                </Form.Group>
-  
-                <Form.Group as={Col} controlId="formGridZip">
-                  <Form.Label>Zip</Form.Label>
-                  <Form.Control disabled={!isProfileEdit} placeholder='zip code' type="number" name='zipcode' value={userData?.zipcode} onChange={handleInputChange}/>
-                </Form.Group>
-              </Row>
-
-              {/* Checkbox Not Needed right Now */}
-              {/* <Form.Group className="mb-3" id="formGridCheckbox">
-                <Form.Check type="checkbox" label="Check me out" />
-              </Form.Group>
-    */}       
-              <div className='d-flex justify-content-end align-items-center'>
-                <Button disabled={isProfileEdit} variant='primary' className='me-2' onClick={handleUserProfile}>
-                  {/* <i className='w-100 text-light fa-regular fa-pen-to-square'></i> */}
-                  Edit
-                </Button>
-
-                {/* <div> */}
-                  <Button disabled={!isProfileEdit} variant='success' className='me-2' type="submit" onClick={handleSave}>    
-                    {/* <i className='w-100 text-light fa-regular fa-pen-to-square'></i> */}
-                    Save Changes
-                  </Button>
-                  
-                  <Button disabled={!isProfileEdit} variant="danger" className='me-2' onClick={handleCancel}>
-                    Cancel
-                  </Button>
-                </div>
-              {/* </div> */}
-          </Form>
-        </Container>
-      </Container>
-    </Container>
-  )
+        {/* Address */}
+        <div className="card-custom">
+          <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-5)' }}>Address</h3>
+          <Field label="Address Line 1" name="address1" placeholder="Street address" />
+          <Field label="Address Line 2" name="address2" placeholder="Apartment, suite, etc." />
+          <div className="grid grid-cols-3">
+            <Field label="City" name="city" placeholder="City" />
+            <Field label="State" name="state" placeholder="State" />
+            <Field label="Zip Code" name="zipcode" placeholder="Zip" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default UserData
+export default UserData;

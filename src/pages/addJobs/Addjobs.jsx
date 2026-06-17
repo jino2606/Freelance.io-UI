@@ -1,174 +1,205 @@
-import React, { useEffect, useState } from 'react'
-import Header from '../../components/header/Header'
-import { Button, Col, Container, ProgressBar, Row } from 'react-bootstrap'
-import AddJobTitle from './AddJobTitle';
-import { Link, useNavigate } from 'react-router-dom';
-import AddJobSkills from './AddJobSkills';
-import AddJobImage from './AddJobImage';
-import AddJobDescription from './AddJobDescription';
-import AddJobBudjet from './AddJobBudjet';
-import { addPostApi } from './addJobsApis';
-import { toast } from 'react-toastify';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createJobPostAPI } from '../../services/allApis';
+import toast from 'react-hot-toast';
+import { ArrowLeft, ArrowRight, Check, X, Plus, Upload, Loader2 } from 'lucide-react';
+
+const STEPS = ['Title', 'Skills', 'Images', 'Description', 'Budget'];
 
 function Addjobs() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    jobTitle: '', jobSkills: [], jobImages: [], jobDescription: '', jobRate: ''
+  });
+  const [skillInput, setSkillInput] = useState('');
+  const [imagePreviews, setImagePreviews] = useState([]);
 
-    const [step, setStep] = useState(1);
-    const [formData, setFormData] = useState({
+  const handleNext = () => { if (step < 4) setStep(step + 1); };
+  const handleBack = () => { if (step > 0) setStep(step - 1); };
 
-      jobTitle: "",
-      jobSkills: [],
-      jobImages: {
-                  file: [],
-                  prevImgs: []
-                  },
-      jobDescription: "",
-      jobRate: 0
-    });
-    
-    /* Image temporary url saver */
-    const [imgURL, setImgURL] = useState([]);
-
-    /* For token */
-    const [token, setToken] = useState("")
-
-    const navigate = useNavigate()
-
-    const handleNext = () => {
-      // setFormData({ ...formData, ...data });
-      if(step<=4){
-        setStep(step + 1);
-      }
-    };
-  
-    const handleBack = () => {
-      if(step>=2){
-        setStep(step - 1);
-      }
-    };
-
-    console.log("this is the form data", formData);
-    
-    const reqBody = new FormData()
-
-    const postJob = async()=>{
-       
-      if(token){
-        /* create request header */
-        var reqHeader = {
-            "Content-Type": "multipart/form-data",
-            "Authorization": `Bearer ${token}` /* send token back as authorization */
-        }
-      }
-
-      const result = await addPostApi(reqBody, reqHeader)
-      console.log("Update results", result);
-      if(result.status === 200){
-          // toast.success("Job Succesfully Posted")
-          // handleClose()
-  
-          /* updating the current session */
-         
-
-      }
-      else{
-        toast.error(result.response.data)
-      }
+  const addSkill = () => {
+    const s = skillInput.trim();
+    if (s && !formData.jobSkills.includes(s)) {
+      setFormData({ ...formData, jobSkills: [...formData.jobSkills, s] });
     }
+    setSkillInput('');
+  };
 
-    /* DeStructure */
-    const {jobTitle, jobSkills, jobImages, jobRate, jobDescription} = formData
-    
-    const handlePost = ()=>{
+  const removeSkill = (idx) => {
+    setFormData({ ...formData, jobSkills: formData.jobSkills.filter((_, i) => i !== idx) });
+  };
 
-      if(!jobTitle || !jobSkills || !jobImages || !jobRate || !jobDescription){
-        toast.warning("Complete all 5 Steps")
+  const handleImages = (e) => {
+    const files = Array.from(e.target.files);
+    const valid = files.filter(f => ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(f.type));
+    if (valid.length !== files.length) toast.error('Only PNG, JPG, WebP images allowed');
+    setFormData({ ...formData, jobImages: [...formData.jobImages, ...valid] });
+    setImagePreviews(prev => [...prev, ...valid.map(f => URL.createObjectURL(f))]);
+  };
+
+  const removeImage = (idx) => {
+    setFormData({ ...formData, jobImages: formData.jobImages.filter((_, i) => i !== idx) });
+    setImagePreviews(imagePreviews.filter((_, i) => i !== idx));
+  };
+
+  const handlePost = async () => {
+    const { jobTitle, jobSkills, jobDescription, jobRate } = formData;
+    if (!jobTitle) { toast.error('Title is required'); setStep(0); return; }
+    if (jobSkills.length === 0) { toast.error('Add at least one skill'); setStep(1); return; }
+    if (!jobDescription || jobDescription.length < 50) { toast.error('Description must be at least 50 characters'); setStep(3); return; }
+    if (!jobRate) { toast.error('Budget is required'); setStep(4); return; }
+
+    setLoading(true);
+    try {
+      const body = new FormData();
+      body.append('jobTitle', jobTitle);
+      body.append('jobDescription', jobDescription);
+      body.append('jobRate', jobRate);
+      jobSkills.forEach(s => body.append('jobSkills', s));
+      formData.jobImages.forEach(f => body.append('jobImages', f));
+
+      const res = await createJobPostAPI(body);
+      if (res.data?.success) {
+        toast.success('Job posted successfully!');
+        navigate('/home');
       }
-      else if (formData.jobDescription.length < 270){
-        toast.warning('Minimum 300 characters are required for the description.');
-        setStep(4)
-      }
-      else{
-        /* removing the preview url from it */
-        setFormData(prevFormData => ({
-          ...prevFormData,
-          jobImages: formData.jobImages.file
-        }));
-
-        reqBody.append('jobTitle', formData.jobTitle);
-        reqBody.append('jobDescription', formData.jobDescription);
-        reqBody.append('jobRate', formData.jobRate);
-
-        formData.jobSkills.map(skill => {
-          reqBody.append('jobSkills', skill);
-        });
-        
-        // Append each file in jobImages array to formData
-        formData.jobImages.file.map((file, index) => {
-            reqBody.append(`jobImages`, file);
-        });
-
-        /* Function to post the job */
-        postJob()
-
-        toast.success("Job Posted Succesfully")
-
-        navigate('/home')
-      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to post job');
+    } finally {
+      setLoading(false);
     }
-    console.log("reqBody", reqBody);
-
-    useEffect(()=>{
-      setToken(sessionStorage.getItem('token'))
-    }, [])
+  };
 
   return (
-    <React.Fragment>
+    <div className="page-wrapper">
+      <div className="container-custom" style={{ maxWidth: '680px' }}>
+        {/* Progress */}
+        <div style={{ marginBottom: 'var(--space-8)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+            {STEPS.map((s, i) => (
+              <button key={i} onClick={() => setStep(i)} style={{
+                fontSize: 'var(--text-xs)', fontWeight: 500, border: 'none', background: 'none', cursor: 'pointer',
+                color: i <= step ? 'var(--accent)' : 'var(--text-tertiary)', fontFamily: 'var(--font-sans)'
+              }}>{s}</button>
+            ))}
+          </div>
+          <div style={{ height: '3px', background: 'var(--bg-tertiary)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${((step + 1) / 5) * 100}%`, background: 'var(--accent)', transition: 'width 0.3s ease', borderRadius: '2px' }} />
+          </div>
+        </div>
 
-        <Container fluid className='position-relative'>
-          <Container className='bg-light'>
-  
-            <h1 className='text-center my-5'>{step}/5 Post a Job</h1>
-            <Row className="justify-content-center shadow rounded-5 ">
-                {step === 1 && <AddJobTitle formData={formData} setFormData={setFormData}/>}
-                {step === 2 && <AddJobSkills formData={formData} setFormData={setFormData}/>}
-                {step === 3 && <AddJobImage formData={formData} setFormData={setFormData} imgURL={imgURL} setImgURL={setImgURL}/>}
-                {step === 4 && <AddJobDescription formData={formData} setFormData={setFormData}/>}
-                {step === 5 && <AddJobBudjet formData={formData} setFormData={setFormData}/>}
-            </Row>
+        <div className="card-custom">
+          <h2 style={{ marginBottom: 'var(--space-2)' }}>
+            {['Job Title', 'Required Skills', 'Project Images', 'Job Description', 'Set Budget'][step]}
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-6)' }}>
+            {[
+              'Give your project a clear, descriptive title',
+              'Add skills required for this project',
+              'Upload images to showcase your project (optional)',
+              'Describe the work needed in detail',
+              'Set the budget for this project'
+            ][step]}
+          </p>
 
+          {/* Step 0: Title */}
+          {step === 0 && (
+            <div className="form-group">
+              <input className="input-custom" placeholder="e.g. Build a responsive e-commerce website" value={formData.jobTitle}
+                onChange={e => setFormData({ ...formData, jobTitle: e.target.value })} autoFocus />
+            </div>
+          )}
 
+          {/* Step 1: Skills */}
+          {step === 1 && (
+            <>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                <input className="input-custom" placeholder="Type a skill and press Add" value={skillInput}
+                  onChange={e => setSkillInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }} />
+                <button className="btn-primary-custom" onClick={addSkill} style={{ flexShrink: 0 }}><Plus size={16} /> Add</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                {formData.jobSkills.map((s, i) => (
+                  <span key={i} className="badge-custom badge-info" style={{ cursor: 'pointer', gap: '6px' }} onClick={() => removeSkill(i)}>
+                    {s} <X size={12} />
+                  </span>
+                ))}
+              </div>
+              {formData.jobSkills.length === 0 && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-3)' }}>No skills added yet</p>}
+            </>
+          )}
 
-          </Container>
+          {/* Step 2: Images */}
+          {step === 2 && (
+            <>
+              <label style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: 'var(--space-10)', border: '2px dashed var(--border-primary)', borderRadius: 'var(--radius-lg)',
+                cursor: 'pointer', transition: 'all 0.2s', marginBottom: 'var(--space-4)'
+              }}>
+                <Upload size={24} style={{ color: 'var(--text-tertiary)', marginBottom: 'var(--space-3)' }} />
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>Click to upload images</p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>PNG, JPG, WebP up to 10MB each</p>
+                <input type="file" accept="image/*" multiple onChange={handleImages} style={{ display: 'none' }} />
+              </label>
+              {imagePreviews.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)' }}>
+                  {imagePreviews.map((url, i) => (
+                    <div key={i} style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', aspectRatio: '16/9' }}>
+                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button onClick={() => removeImage(i)} style={{
+                        position: 'absolute', top: '4px', right: '4px', width: '24px', height: '24px',
+                        borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                      }}><X size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
-          
-          
-          <Row className='position-fixed w-100 bottom-0 mb-5'>
-            <ProgressBar now={step} max={5} style={{height: '5px'}}/>;
-            <Col className='mt-3 d-flex justify-content-evenly'>
-              <Button disabled={step===1} variant="primary" size="lg" className='rounded-pill' onClick={handleBack}>
-                Back
-              </Button>
+          {/* Step 3: Description */}
+          {step === 3 && (
+            <div className="form-group">
+              <textarea className="textarea-custom" placeholder="Describe the project scope, deliverables, timeline..."
+                value={formData.jobDescription} onChange={e => setFormData({ ...formData, jobDescription: e.target.value })}
+                style={{ minHeight: '200px' }} />
+              <p className="form-hint">{formData.jobDescription.length}/50 minimum characters</p>
+            </div>
+          )}
 
-                {
-                  step !==5 &&
-                  <Button variant="primary" size="lg" className='rounded-pill' onClick={handleNext}>
-                   Next
-                  </Button>
-                }
+          {/* Step 4: Budget */}
+          {step === 4 && (
+            <div className="form-group">
+              <label className="form-label-custom">Fixed Price (₹)</label>
+              <input className="input-custom" type="number" placeholder="Enter amount" value={formData.jobRate}
+                onChange={e => setFormData({ ...formData, jobRate: e.target.value })} min="1" />
+            </div>
+          )}
+        </div>
 
-                {
-                  step === 5 &&
-                  <Button variant="success" size="lg" className='rounded-pill' onClick={handlePost}>
-                    Post
-                  </Button>
-                }
-            </Col>
-          </Row>
-        </Container>
-
-    </React.Fragment>
-
-  )
+        {/* Navigation */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--space-6)' }}>
+          <button className="btn-secondary-custom" onClick={handleBack} disabled={step === 0}>
+            <ArrowLeft size={16} /> Back
+          </button>
+          {step < 4 ? (
+            <button className="btn-primary-custom" onClick={handleNext}>
+              Next <ArrowRight size={16} />
+            </button>
+          ) : (
+            <button className="btn-success-custom" onClick={handlePost} disabled={loading}>
+              {loading ? <Loader2 size={18} className="spinning" /> : <><Check size={16} /> Post Job</>}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default Addjobs
+export default Addjobs;

@@ -1,96 +1,103 @@
-import React from 'react'
-import './landingPage.css'
-import { Button, Col, Container, Form, Row } from 'react-bootstrap'
-import BannerImage from '../../assets/images/banner-img.png'
-import PopularServices from '../../components/landingPageComponents/PopularServices'
-import HeaderNav from '../../components/header/HeaderNav'
-import FillUps from '../../components/landingPageComponents/FillUps'
-import FAQ from '../../components/landingPageComponents/FAQ'
-import Header from '../../components/header/Header'
+import React from 'react';
+import { Link } from 'react-router-dom';
+import Header from '../../components/header/Header';
+import { ArrowRight, Users, Briefcase, Shield, Zap } from 'lucide-react';
 
 function LandingPage() {
   return (
-<>
+    <>
+      <Header />
+      <main className="page-wrapper" style={{ paddingTop: 'calc(var(--header-height) + var(--space-16))' }}>
+        {/* Hero */}
+        <section className="container-custom" style={{ textAlign: 'center', maxWidth: '720px', marginBottom: 'var(--space-16)' }}>
+          <div className="badge-custom badge-info" style={{ marginBottom: 'var(--space-5)', display: 'inline-flex' }}>
+            <Zap size={12} /> New: Instant project matching
+          </div>
+          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 700, lineHeight: 1.2, marginBottom: 'var(--space-5)' }}>
+            Find talent. Get hired.<br />Build something great.
+          </h1>
+          <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto var(--space-8)' }}>
+            Connect with skilled freelancers or find your next project. Post jobs, apply to gigs, and collaborate — all in one place.
+          </p>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/auth/signup" className="btn-primary-custom btn-lg">
+              Get started free <ArrowRight size={16} />
+            </Link>
+            <Link to="/auth/login" className="btn-secondary-custom btn-lg">
+              Sign in
+            </Link>
+          </div>
+        </section>
 
-      <Container fluid className='landing-banner pb-5'>
-
-        <Header />
-        {/* <HeaderNav /> */}
-        
-        <Container className='pt-5 pb-4'>
-        {/* #FFC125 */}
-  {/*       
-          <div className='row'>
-            <div className='col-6'>
-              <h1 style={{fontSize: '8em', color: ''}}>THIS IS THE BANNER</h1>
-              <button className='button-cust'></button>
-            </div>
-  
-            <div className='col-6'>
-  
-            </div>
-  
-          </div> */}
-  
-          <Row className='mt-5'>
-  
-            <Col lg={6}>
-              <p className='banner-text'>Connect, Create, Collaborate! Post or Find Freelance Gigs Today!</p>
-  
-                <Form className="d-flex mt-5 search-box shadow">
-                  <Form.Control type="search" placeholder="Search for any service..." className="main-search" aria-label="Search" />
-                  {/* <Button variant="outline-success">Search</Button> */}
-                  <button className='search-button'><i class="fa-solid fa-magnifying-glass"></i></button>
-                </Form>
-            </Col>
-  
-            <Col lg={6} className='d-flex justify-content-center'>
-              <img style={{width:"388px"}} className='' src={BannerImage} alt="" />
-            </Col>
-  
-          </Row>
-
-          {/* <div className="container mx-auto pt-5 pb-4">
-            <div class="flex lg:flex-row flex-col">
-              <div class="lg:w-1/2">
-                <p class="banner-text">Connect, Create, Collaborate! Post or Find Freelance Gigs Today!</p>
-
-                <form class="flex mt-5 shadow">
-                  <input type="search" placeholder="Search for any service..." class="flex-grow p-2 border-r-0 rounded-l" />
-                  <button type="submit" class="bg-blue-500 text-white p-2 rounded-r"><i class="fas fa-search"></i></button>
-                </form>
+        {/* Features */}
+        <section className="container-custom" style={{ marginBottom: 'var(--space-16)' }}>
+          <div className="grid grid-cols-3" style={{ maxWidth: '960px', margin: '0 auto' }}>
+            {[
+              { icon: <Briefcase size={22} />, title: 'Post & Find Jobs', desc: 'Create detailed job listings or browse available projects that match your skills.' },
+              { icon: <Users size={22} />, title: 'Connect Directly', desc: 'Chat with clients or freelancers in real-time. No middlemen, no delays.' },
+              { icon: <Shield size={22} />, title: 'Manage Projects', desc: 'Track applications, hire talent, and manage project status from your dashboard.' }
+            ].map((f, i) => (
+              <div key={i} className="card-custom" style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: 'var(--radius-lg)',
+                  background: 'var(--accent-light)', color: 'var(--accent)',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 'var(--space-4)'
+                }}>{f.icon}</div>
+                <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-2)' }}>{f.title}</h3>
+                <p style={{ fontSize: 'var(--text-sm)', margin: 0 }}>{f.desc}</p>
               </div>
+            ))}
+          </div>
+        </section>
 
-              <div class="lg:w-1/2 flex justify-center">
-                <img style={{width: '388px'}} src={BannerImage} alt="" />
-              </div>
+        {/* How it works */}
+        <section style={{ background: 'var(--bg-primary)', padding: 'var(--space-16) 0', borderTop: '1px solid var(--border-secondary)', borderBottom: '1px solid var(--border-secondary)' }}>
+          <div className="container-custom" style={{ maxWidth: '720px', textAlign: 'center' }}>
+            <h2 style={{ marginBottom: 'var(--space-10)' }}>How it works</h2>
+            <div className="grid grid-cols-3">
+              {[
+                { num: '1', title: 'Create your profile', desc: 'Sign up and showcase your skills and experience' },
+                { num: '2', title: 'Post or apply', desc: 'List a job or browse available opportunities' },
+                { num: '3', title: 'Collaborate', desc: 'Connect, negotiate, and deliver great work' }
+              ].map((s, i) => (
+                <div key={i} style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: 'var(--radius-full)',
+                    background: 'var(--accent)', color: '#fff', fontSize: 'var(--text-sm)',
+                    fontWeight: 700, display: 'inline-flex', alignItems: 'center',
+                    justifyContent: 'center', marginBottom: 'var(--space-4)'
+                  }}>{s.num}</div>
+                  <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>{s.title}</h4>
+                  <p style={{ fontSize: 'var(--text-sm)', margin: 0 }}>{s.desc}</p>
+                </div>
+              ))}
             </div>
-          </div> */}
+          </div>
+        </section>
 
+        {/* CTA */}
+        <section className="container-custom" style={{ textAlign: 'center', padding: 'var(--space-16) 0' }}>
+          <h2 style={{ marginBottom: 'var(--space-4)' }}>Ready to get started?</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)' }}>Join thousands of freelancers and clients on Freelance.io</p>
+          <Link to="/auth/signup" className="btn-primary-custom btn-lg">
+            Create free account <ArrowRight size={16} />
+          </Link>
+        </section>
 
-
-          
-        </Container>
-  
-  
-      </Container>
-          
-       {/* Popular Services Section Cards*/}   
-      <section>
-        <PopularServices />
-      </section>
-
-      {/*Some Fillup section*/}   
-      <section>
-        <FillUps />
-      </section>
-
-      {/*Section For FAQ*/}   
-      <section className='py-5 mb-5'>
-        <FAQ />
-      </section>
-</>
-  )
+        {/* Footer */}
+        <footer style={{ borderTop: '1px solid var(--border-secondary)', padding: 'var(--space-6) 0' }}>
+          <div className="container-custom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>© 2024 Freelance.io</span>
+            <div style={{ display: 'flex', gap: 'var(--space-6)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Privacy</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Terms</span>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </>
+  );
 }
 
-export default LandingPage
+export default LandingPage;

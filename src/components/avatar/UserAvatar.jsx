@@ -1,19 +1,34 @@
-import React from 'react'
-import Avatar from './Avatar'
-import { BASE_URL } from '../../services/baseUrl'
+import React from 'react';
+import { BASE_URL } from '../../services/baseUrl';
 
-function UserAvatar({userData, heightxwidth, fontSize}) {
+function UserAvatar({ userData, heightxwidth = 3, fontSize = '14px' }) {
+  const size = `${heightxwidth}rem`;
+
+  const getInitials = () => {
+    if (!userData) return '?';
+    const f = userData.firstname?.[0] || userData.username?.[0] || '';
+    const l = userData.lastname?.[0] || '';
+    return `${f}${l}`.toUpperCase() || '?';
+  };
+
+  const hasImage = userData?.profileImg?.length > 0 && userData.profileImg[0]?.filename;
+
   return (
-    <div className='position-relative rounded-circle bg-primary border border-light-4 border-4 d-flex justify-content-center align-items-center overflow-hidden' style={{height: `${heightxwidth}rem`, width: `${heightxwidth}rem`}}>
-        {   
-            userData?.profileImg?.length>0?
-            <img src={`${BASE_URL}/uploads/${userData.profileImg[0].filename}`} alt="" className='w-100 object-fit-cover position-center' />:
-
-            /* If no User Image then just initials */
-            <Avatar fontWeight={'200'} fontSize={fontSize} userData={userData}/>
-        }
-    </div >
-  )
+    <div
+      className="avatar"
+      style={{ width: size, height: size, fontSize }}
+    >
+      {hasImage ? (
+        <img
+          src={`${BASE_URL}/uploads/${userData.profileImg[0].filename}`}
+          alt={`${userData?.firstname || 'User'}'s avatar`}
+          loading="lazy"
+        />
+      ) : (
+        getInitials()
+      )}
+    </div>
+  );
 }
 
-export default UserAvatar
+export default UserAvatar;

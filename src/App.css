@@ -1,10 +1,1 @@
-
-.buttonbuttn{
-  /* #FF9966 */
-  border-color: #FF9966 !important;
-}
-
-.buttonbuttn:hover{
-  /* #FF9966 */
-  background-color: #FF9966 !important;
-}
+/* Auth pages need no separate CSS import - App.css handles them now */

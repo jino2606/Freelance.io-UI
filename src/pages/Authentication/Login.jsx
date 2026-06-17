@@ -1,149 +1,114 @@
-import React, { useContext, useEffect, useState } from 'react'
-import { Col, Container, Row } from 'react-bootstrap'
-import { NavLink, useNavigate } from 'react-router-dom'
-import loginIMG from '../../assets/images/login/laptop-Cofee.jpg'
-import { userLogin } from '../../services/allApis'
-import { isAuthTokenContext } from '../../context/ContextShare'
-import { io } from 'socket.io-client'
-import socketConnection from '../../services/socketConnect'
-import { toast } from 'react-toastify'
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { userLogin } from '../../services/allApis';
+import { useAuth } from '../../context/ContextShare';
+import socketConnection from '../../services/socketConnect';
+import toast from 'react-hot-toast';
+import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 
 function Login() {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-    const [userData, setUserData] = useState({
-        email:"",
-        password: ""
-    })
+  const validate = () => {
+    const errs = {};
+    if (!form.email) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Enter a valid email';
+    if (!form.password) errs.password = 'Password is required';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
-    /* to set login is made or not */
-    const {isAuthToken, setIsAuthToken} = useContext(isAuthTokenContext)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
 
-    const navigate = useNavigate()
-
-    // const socketConnection = () => {
-    //     // Connect to WebSocket upon successful login
-    //     const socket = io('http://localhost:4000'); // Replace 'http://your-backend-url' with your actual backend URL
-    //     socket.on('connect', () => {
-    //       console.log('Connected to server and isAuthToken', isAuthToken);  
-    //     });
-    
-    //     // Save socket instance to use throughout the app
-    //     window.socket = socket;
-    //   };
-
-    const handleLogin = async(e)=>{
-        e.preventDefault()
-    
-        const {email, password} = userData
-        if(!email || !password){
-        //   toast.warning("Please Fill the form first")
-          toast.warning("Please Fill the form first")
-        }
-        else{
-          const result = await userLogin(userData)
-          if(result.status === 200){
-
-           toast.success(`Logged in Successfully`)
-            console.log("resultssa", result.data);
-            /* saving the session and token in to the session storage. Create a key and value*/
-            sessionStorage.setItem("loggedInUser", JSON.stringify(result.data.loggedInUser)) /* covert it to a string format while storing */
-            sessionStorage.setItem("token", result.data.token)
-    
-            /* Empty the form */
-            setUserData({
-              email:"",
-              password:""
-            })
-
-            /* set authtoken to true */
-            setIsAuthToken(true)
-
-            /* setting the socket connection from the login itself */
-            // if(isAuthToken){
-            socketConnection()
-            // }else{
-                // alert(`The Socket Connection Failed. Realtime notifications and messages won't work, Try Login again`)
-            // }
-            
-            /* setting a timeout to show and make work the toast messge to work */
-            /*  introducing artificial delays using setTimeout is generally not considered a best practice, as it may lead to unpredictable behavior and is more of a workaround than a solution.
-                Using a state management solution, such as passing state through the router, is a cleaner and more maintainable approach */
-                
-            // setTimeout(()=>{
-              /* navigate to home */
-
-              navigate('/home')
-            // }, 2000)
-            
-          }
-          else{
-            // toast.error(result.response.data)
-            console.log(result.response.data);
-            toast.error(result.response.data)
-
-          }
-        }
+    try {
+      const result = await userLogin(form);
+      if (result.data?.loggedInUser) {
+        login(result.data.loggedInUser, result.data.token);
+        socketConnection();
+        toast.success('Welcome back!');
+        navigate('/home');
       }
-    
-    /* When the token is present in the session (when user is logged in) the login page will always navigate to home page */
-    const isLoggedIn = ()=>{
-        if (sessionStorage.getItem("token")){ 
-            navigate('/home')
-        }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Login failed. Please try again.';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    useEffect(()=>{
-        isLoggedIn()
-    },[])
-
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
+  };
 
   return (
-    <Container className='d-flex justify-content-center align-items-center' style={{height: '100vh'}}>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <Link to="/" className="auth-logo">
+            <span className="logo-dot"></span>
+            Freelance.io
+          </Link>
+          <h1 className="auth-title">Welcome back</h1>
+          <p className="auth-subtitle">Sign in to your account to continue</p>
+        </div>
 
-        <Row className='shadow'>
-            <Col lg={6}>
-                <img className='w-100 h-100' style={{objectFit: 'contain'}} src={loginIMG} alt="" />
-            </Col>
-            <Col lg={6} className='bg-white'>
-                <div className="auth-wrapper">
-                    <div className="auth-content">
-                        <div className="auth-bg">
-                            <span className="r"/>
-                            <span className="r s"/>
-                            <span className="r s"/>
-                            <span className="r"/>
-                        </div>
-                        <div className="">
-                            <div className="text-center">
-                                <div className="mb-4">
-                                    <i className="feather icon-unlock auth-icon"/>
-                                </div>
-                                <h3 className="mb-4">Login</h3>
-                                <div className="input-group mb-3">
-                                    <input onChange={(e)=>setUserData({...userData, email:e.target.value})} value={userData.email} type="email" className="form-control" placeholder="Email" autoComplete="email" name='email'/>
-                                </div>
-                                <div className="input-group mb-4">
-                                    <input onChange={(e)=>setUserData({...userData, password:e.target.value})} value={userData.password} type="password" className="form-control" placeholder="password" autoComplete="current-password" name='password'/>
-                                </div>
-                                <div className="form-group text-left">
-                                    <div className="checkbox checkbox-fill d-inline">
-                                        <input type="checkbox" name="checkbox-fill-1" id="checkbox-fill-a1" />
-                                        <label htmlFor="checkbox-fill-a1" className="cr"> Save credentials</label>
-                                    </div>
-                                </div>
-                                <button onClick={handleLogin} type='submit' className="btn btn-primary shadow-2 mb-4">Login</button>
-                                <p className="mb-2 text-muted">Forgot password? <NavLink to="/auth/reset-password-1">Reset</NavLink></p>
-                                <p className="mb-0 text-muted">Don't have an account? <NavLink to="/auth/signup">Signup</NavLink></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </Col>
-        </Row>
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
+          <div className="form-group">
+            <label className="form-label-custom" htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              name="email"
+              className={`input-custom ${errors.email ? 'input-error' : ''}`}
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={handleChange}
+              autoComplete="email"
+              autoFocus
+            />
+            {errors.email && <p className="form-error">{errors.email}</p>}
+          </div>
 
+          <div className="form-group">
+            <label className="form-label-custom" htmlFor="login-password">Password</label>
+            <div className="input-with-icon">
+              <input
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                className={`input-custom ${errors.password ? 'input-error' : ''}`}
+                placeholder="Enter your password"
+                value={form.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+              />
+              <button type="button" className="input-icon-btn" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {errors.password && <p className="form-error">{errors.password}</p>}
+          </div>
 
-    </Container>
-  )
+          <button type="submit" className="btn-primary-custom btn-block btn-lg" disabled={loading}>
+            {loading ? <Loader2 size={18} className="spinning" /> : <>Sign in <ArrowRight size={16} /></>}
+          </button>
+        </form>
+
+        <p className="auth-footer">
+          Don't have an account? <Link to="/auth/signup">Create one</Link>
+        </p>
+      </div>
+    </div>
+  );
 }
 
-export default Login
+export default Login;

@@ -1,38 +1,32 @@
-import React,{useState} from 'react';
-import { toast } from 'react-toastify';
+import React from 'react';
+import toast from 'react-hot-toast';
+import { CreditCard } from 'lucide-react';
 
 function Payment() {
-  const [amount, setAmount] = useState('1');
-
-  const handleSubmit = (e)=>{
-
+  const handleSubmit = (e) => {
     e.preventDefault();
-    var options = {
-        key: "rzp_test_1LfzQfVW1C8CbP", // Enter the Key ID generated from the Dashboard
+    if (window.Razorpay) {
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY || 'rzp_test_1LfzQfVW1C8CbP',
         amount: 100,
-        currency: "INR",
-        name:"Project Payment",
-        description:"for testing purpose",
-        description: "Acme Corp",
-        image: "https://s3.amazonaws.com/rzp-mobile/images/rzp.jpg",
-        prefill:
-        {
-          email: "gaurav.kumar@example.com",
-          contact: +919900000000,
-        },
-        
-        handler: function (response) {
-          toast.success(`Payment Success. PaymentID:${response.razorpay_payment_id}`);
+        currency: 'INR',
+        name: 'Project Payment',
+        description: 'Freelance.io Payment',
+        handler: (response) => {
+          toast.success(`Payment successful! ID: ${response.razorpay_payment_id}`);
         },
       };
-    // var rzp1 = new Razorpay(options);
-      var pay = new window.Razorpay(options);
+      const pay = new window.Razorpay(options);
       pay.open();
-  }
+    } else {
+      toast.error('Payment gateway not available');
+    }
+  };
+
   return (
-    <div className="App">
-        <p onClick={handleSubmit} className='m-0 align-middle'><i className="fa-solid fa-check-double me-2"></i>Make Payment!</p>
-    </div>
+    <button className="btn-primary-custom btn-sm" onClick={handleSubmit}>
+      <CreditCard size={14} /> Pay & Complete
+    </button>
   );
 }
 

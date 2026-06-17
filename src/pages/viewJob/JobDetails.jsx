@@ -1,361 +1,230 @@
-import React, { useEffect, useState } from 'react'
-import { Button, Carousel, Col, Container, Row, Spinner } from 'react-bootstrap'
-import { Link, useLocation, useParams } from 'react-router-dom';
-import UserAvatar from '../../components/avatar/UserAvatar';
-import { BASE_URL } from '../../services/baseUrl';
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useAuth } from '../../context/ContextShare';
+import { getJobPostAPI, requestTaskAPI, deleteRequestAPI } from '../../services/allApis';
 import ImgCarousel from '../../components/commonComponents/ImgCarousel';
-import { deleteRequestTask, getPostData, getPostDate, requestTask } from './viewJobsApis';
-import Header from '../../components/header/Header';
-import { toast } from 'react-toastify';
+import UserAvatar from '../../components/avatar/UserAvatar';
+import toast from 'react-hot-toast';
+import { MapPin, Briefcase, GraduationCap, MessageSquare, ExternalLink, Loader2 } from 'lucide-react';
 
 function JobDetails() {
+  const { jobPostId } = useParams();
+  const { user } = useAuth();
+  const [jobPost, setJobPost] = useState(null);
+  const [poster, setPoster] = useState(null);
+  const [request, setRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-    const location = useLocation();
-    
-    // const jobPostData = location.state.jobPostData
+  const stateMap = { 0: 'Open', 1: 'In Progress', 2: 'Closed' };
+  const stateStyle = { 0: 'badge-success', 1: 'badge-info', 2: 'badge-danger' };
 
-    // const userData = jobPostData.user[0]
-
-    const { jobPostId } = useParams();
-
-    const token = sessionStorage.getItem("token")
-
-    const [loggedinUser, setLoggedinUser] = useState([])
-
-    const [jobPostData, setJobPostData] = useState([])
-    const [userData, setUserData] = useState([])
-    
-    const [jobRequestType, setJobRequestType] = useState([])
-    const [buttonData, setButtonData] = useState("")
-    /* setting loading data manulally */
-    const [loadingPageData, setLoadingPageData] = useState(true);
-    // const [loadingButtonData, setLoadingButtonData] = useState(true);
-
-
-    const stateMap = {  /* This is to assign current state names based on the numeric values we get  */
-        0: "Open",
-        1: "Engaged",
-        2: "Closed"
-    };
-
-    const getProjectData = async()=>{
-
-        try {
-
-            const token = sessionStorage.getItem("token")
-            if(token){
-                /* create request header */
-                var reqHeader = {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` /* send token back as authorization */
-                }
-            }
-
-            const response = await getPostData( jobPostId, reqHeader)
-            console.log("while single getPostData", response.data);
-            const {jobPost, jobPoster, jobPostRequests} = response.data
-
-            setJobPostData(jobPost)
-            setUserData(jobPoster)
-            setJobRequestType(jobPostRequests)
-
-        } catch (error) {
-            console.error('Error fetching other data:', error);
-        }  finally {
-            setLoadingPageData(false);
-        }
+  const fetchData = async () => {
+    try {
+      const res = await getJobPostAPI(jobPostId);
+      const data = res.data;
+      setJobPost(data.jobPost);
+      setPoster(data.jobPoster);
+      setRequest(data.jobPostRequests);
+    } catch (err) {
+      toast.error('Failed to load job details');
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => { fetchData(); }, [jobPostId]);
 
-    const getCurrentUser = ()=>{
-        if (sessionStorage.getItem("loggedInUser")){
-            const currentUser = JSON.parse(sessionStorage.getItem("loggedInUser"))
-            setLoggedinUser(currentUser)
-            // console.log("Got Current user", currentUser);
+  const handleRequestTask = async () => {
+    setActionLoading(true);
+    try {
+      if (!request) {
+        const res = await requestTaskAPI({ jobPostId: jobPost._id, requestType: 0 });
+        if (res.data?.success) {
+          if (window.socket && poster?._id) {
+            window.socket.emit('Request Notification', {
+              jobPosterId: poster._id,
+              notification: res.data.request
+            });
+          }
+          toast.success('Request sent successfully!');
         }
-        
+      } else if (request.requestType === 0) {
+        const res = await deleteRequestAPI(request._id);
+        if (res.data?.success) toast.success('Request withdrawn');
+      }
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Action failed');
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    const handleRequestTask = async()=>{
-        //  
-            
-        if(token){
-            /* create request header */
-            var reqHeader = {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}` /* send token back as authorization */
-            }
+  const getButtonConfig = () => {
+    if (!request) return { text: 'Apply for this job', variant: 'btn-primary-custom', disabled: false };
+    if (request.requestType === 0) return { text: 'Withdraw application', variant: 'btn-danger-custom', disabled: false };
+    if (request.requestType === 2) return { text: 'Completed', variant: 'btn-success-custom', disabled: true };
+    return { text: 'In Progress', variant: 'btn-secondary-custom', disabled: true };
+  };
 
-        }
-
-        /* [0-Request Task, 1-Cancel Task, 2-Finished] */
-
-        if(jobRequestType == null){
-            console.log("INIFFFF");
-            const reqBody = {     
-                jobPostId: jobPostData._id,
-                requestType: 0
-            }
-    
-            const result = await requestTask(reqBody, reqHeader)
-
-            if(result.status === 200){
-
-                const payload = {
-                    jobPosterId: userData._id,
-                    notification: result.data
-                }
-                    
-
-                window.socket.emit('Request Notification', payload);
-
-                toast.success("Your request has been received. Expect a response from the job poster soon.")
-          
-            }
-            else{
-                console.log(result.response.data);
-                toast.error(result.response.data)
-            }
-            
-        } else if(jobRequestType.requestType == 0){
-            console.log(" IN ELSE IFFFF");
-            const result = await deleteRequestTask(jobRequestType._id, reqHeader)
-
-            if(result.status === 200){
-
-                toast.success("Your request has been Updated.")
-    
-            }
-            else{
-                console.log(result.response.data);
-                toast.error(result.response.data)
-            } 
-        }
-
-        getProjectData()
-
-    }
-
-    const handleButtonData = ()=>{
-        if(jobRequestType != null){
-            console.log("request Button");
-            if(jobRequestType.requestType == 0){
-                console.log("request Button 0");
-                setButtonData("Cancel Request")
-            }
-            if(jobRequestType.requestType == 2){
-                console.log("request Button 2");
-                setButtonData("Finished")
-            }
-        } else{
-            console.log("Else request Button");
-            setButtonData("Request Task")
-        }
-    }
-
-    useEffect(()=>{
-        getCurrentUser()
-        getProjectData()
-    }, [])
-
-    useEffect(()=>{
-        if(!loadingPageData){
-            handleButtonData()
-        }
-    }, [loadingPageData, jobPostData]) /* This use effect is to get the Buttons data only if the other data are loaded.
-                            it is triggered while "loadingPageData" but also checks if it is false(false means other data are loaded) */
-
-    useEffect(() => {
-        const createNewElement = (chat) => {
-            console.log("iRequest Notification Console log", chat); 
-        }
-        
-        
-        window.socket?.on('Request Notification', createNewElement);
-
-        return () => {
-            // Cleanup function
-            window.socket?.off('Request Notification', createNewElement);
-        };
-    }, [window.socket]);                        
-    
+  if (loading) {
     return (
-        <React.Fragment>
-            <Header/>
-            <Container fluid className='my-5 mx-auto'>
-                {/* <Container className='mt-5'> */}
-                    {
-                        loadingPageData ? (
-                            <div className='d-flex justify-content-center align-items-center' style={{height: '60vh'}}> 
-                                <div style={{width: '10em', height: '10em'}}>
-                                    <Spinner animation="border" variant="primary" className='me-4 w-100 h-100'/>
-                                    <p className='fs-1'>Loading...</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <Row className='mx-5 justify-content-center w-100 h-100'>
-                                <Col lg={3}> 
-                                    <div className='p-5 shadow rounded-5 me-4'>
-                                        <div className='mt-3 mb-3'>
-                                            <h4 className='text-center m-0 fs-1'>Job provider</h4>
-                                        </div>
-                                        <Row>
-                                            <Col className='d-flex justify-content-center'>
-                                                <UserAvatar userData={userData} heightxwidth={18} fontSize={'6rem'}/>
-                                            </Col>
-                                        </Row>
-            
-                                        <Row>
-                                            <Col className='text-center'>
-                                                <h5 className='text-center my-3'>
-                                                    {`${userData?.firstname.toUpperCase()} ${userData?.lastname.toUpperCase()}`}
-                                                </h5>
-            
-                                                <div className="font-weight-300 d-flex justify-content-center">
-                                                    <h6 className={!userData?.city && 'fst-italic'}>{`${userData?.city?userData.city: "City"}, ${userData?.state?userData.state: "state"}`}</h6> 
-                                                    <div className='d-flex justify-content-center' style={{width: '2rem'}}>
-                                                        <i className="fa-solid fa-location-dot"></i>
-                                                    </div>
-                                                </div>
-            
-                                                <div className="mt-2 d-flex justify-content-center">
-            
-                                                    <h6 className={!userData?.jobTitle && 'fst-italic'}>{userData?.jobTitle? userData.jobTitle: "Current Job Title" }</h6>
-            
-                                                    <div className='d-flex justify-content-center' style={{width: '2rem'}}>
-                                                    <i className="fa-solid fa-briefcase"></i>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="mt-2 d-flex justify-content-center">
-                                                    <p className={!userData?.education && 'fst-italic'}>{userData?.education? userData.education: "Add Institution of Study" }</p>
-                                                    <div className='d-flex justify-content-center' style={{width: '2rem'}}>
-                                                    <i className="fa-solid fa-graduation-cap"></i>
-                                                    </div>
-                                                </div>
-            
-                                                <div className='me-2 mt-2 social-handles'>
-                                                    <a href={userData?.github} target='_blank' type='button'> <i className="fa-brands fa-square-github fa-2x me-3"></i></a>   
-                                                    <a href={userData?.linkedin} target='_blank'> <i className="fa-brands fa-linkedin fa-2x me-3"></i></a>
-                                                    <a href={userData?.profile} target='_blank'> <i className="fa-solid fa-image-portrait fa-2x"></i></a>
-                                                </div>
-            
-                                                <div className="mt-4 d-grid gap-2">
-                                                    <Link style={{ pointerEvents: loggedinUser?._id === userData?._id?'none': 'auto'}} to={`/user/chats/${userData._id}`} aria-disabled={loggedinUser?._id === userData?._id}>
-                                                        <Button variant="primary" size="lg" className='w-100' disabled={loggedinUser?._id === userData?._id}>
-                                                            Contact
-                                                        </Button>
-                                                    </Link>
-            
-                                                    <Link style={{ pointerEvents: loggedinUser?._id === userData?._id?'none': 'auto'}} to={`/user/chats/${userData._id}`} aria-disabled={loggedinUser?._id === userData?._id}>
-                                                        <Button variant="secondary" size="lg" className='w-100'>
-                                                            View Profile
-                                                        </Button>
-                                                    </Link>
-                                                </div>
-                                            </Col>
-                                        </Row>
-                                    </div>
-                                </Col>
-                                {/* style={{height: '85vh'}} */}
-                                <Col lg={6} className='h-100' >
-                                    <div className='p-5 pb-3 shadow rounded-5 position-relative'>
-                                        <Row>
-                                            <Col lg={9}>
-                                                <h1>
-                                                    {jobPostData?.jobTitle}
-                                                </h1>
-                                            </Col>
-                                            <Col lg={3} className='d-flex flex-column align-items-end justify-content-center'> {/* d-flex justify-content-end */}
-                                                <div className=''>
-                                                    <h1 className='m-0'>
-                                                        <i class="fa-solid fa-indian-rupee-sign me-2"></i>
-                                                        {jobPostData?.jobRate}
-                                                    </h1>
-                                                    <p className='text-end'>Paid on delivery</p>
-                                                </div>
-                                                {/* p-2 d-flex rounded-pill justify-content-center align-items-center */}
-                                                <div className={`
-                                                                p-2 d-flex rounded-pill justify-content-center align-items-center
-                                                                ${
-                                                                    jobPostData?.state === 0 ? 'bg-success-subtle' : 
-                                                                    jobPostData?.state === 1 ? 'bg-primary-subtle' :
-                                                                    jobPostData?.state === 2 && 'bg-danger-subtle' 
-                                                                }
-                                                                `} style={{pointerEvents: 'none'}}>
-                                                    <i className="fa-solid fa-tag me-2"></i>
-        
-                                                    <p className='p-0 m-0'>{
-                                                        stateMap[jobPostData?.state]
-                                                    }</p>
-                                                    
-                                                </div>
-        
-                                            </Col>
-                                        </Row>
-            
-            
-                                        <Row className='my-4'>
-                                            <Col>
-                                                <div>
-                                                    <ImgCarousel jobPostData={jobPostData} height={'30rem'}/> {/* Custom Component */}
-                                                </div>
+      <div className="page-wrapper">
+        <div className="container-custom">
+          <div className="grid" style={{ gridTemplateColumns: '300px 1fr', gap: 'var(--space-8)' }}>
+            <div className="skeleton" style={{ height: '400px', borderRadius: 'var(--radius-lg)' }}></div>
+            <div>
+              <div className="skeleton skeleton-title" style={{ width: '70%' }}></div>
+              <div className="skeleton" style={{ height: '250px', marginTop: 'var(--space-4)' }}></div>
+              <div className="skeleton skeleton-text" style={{ marginTop: 'var(--space-4)' }}></div>
+              <div className="skeleton skeleton-text"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-                                                <div className='mt-5'>
-                                                    <h3>Job Description</h3>
-                                                    <div className='mt-4 overflow-y-scroll' style={{maxHeight: '20rem'}}>
-                                                        <p style={{lineHeight: '2em'}}>{jobPostData?.jobDescription}</p>
-                                                    </div>
-                                                </div>
+  const isOwner = user?._id === poster?._id;
+  const btn = getButtonConfig();
 
-                                                <div className='mt-4'>
-                                                    <h3>Skills Required</h3>
-                                                    <div className='mt-4 d-flex'>
-                                                        
-                                                        {   
-                                                            jobPostData?.jobSkills.length>0 &&
-                                                            jobPostData?.jobSkills.map(item => (
-                                                                <div className='px-4 py-2 border rounded me-2'>
-                                                                    <p className='m-0'>{item}</p>
-                                                                </div>
-                                                            ))
-                                                        }
-                                                    </div>
-                                                </div>
-                                                
-                                                <div>
-                                                    <div className="mt-4 d-grid gap-2">
-                                                        <Button variant={
-                                                                `${ 
-                                                                    jobRequestType == null ? 'primary':
-                                                                    jobRequestType?.requestType == 0 ? 'danger':
-                                                                    jobRequestType?.requestType == 2 && 'success'
-                                                                }`
-                                                            } 
-                                                            size="lg" className='w-100' 
-                                                            disabled={loggedinUser?._id === userData?._id || jobRequestType?.requestType == 2 } 
-                                                            onClick={handleRequestTask}
-                                                            >
-                                                            {buttonData}
-                                                        </Button>
-                                                    </div>  
-                                                </div>
-                                            </Col>
-                                        </Row>
-                                    </div>
-                                </Col>
-        
-                                {/* <Col lg={2} className='bg-success-subtle' style={{height: '38em'}}>
-                                    
-                                </Col> */}
-                            </Row>
-                        )
+  return (
+    <div className="page-wrapper">
+      <div className="container-custom">
+        <div className="job-detail-grid">
+          {/* Sidebar - Poster Info */}
+          <aside className="card-custom job-poster-card">
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-4)', fontWeight: 600 }}>
+                Job Provider
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-4)' }}>
+                <UserAvatar userData={poster} heightxwidth={6} fontSize="1.8rem" />
+              </div>
+              <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-1)' }}>
+                {poster?.firstname} {poster?.lastname}
+              </h3>
 
-                    }
-                {/* </Container> */}
-            </Container>
-        </React.Fragment>
-    )
+              {(poster?.city || poster?.state) && (
+                <div className="flex items-center justify-center gap-2" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
+                  <MapPin size={14} />
+                  <span>{[poster?.city, poster?.state].filter(Boolean).join(', ') || 'Location not set'}</span>
+                </div>
+              )}
+
+              {poster?.jobTitle && (
+                <div className="flex items-center justify-center gap-2" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>
+                  <Briefcase size={14} />
+                  <span>{poster.jobTitle}</span>
+                </div>
+              )}
+
+              {poster?.education && (
+                <div className="flex items-center justify-center gap-2" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
+                  <GraduationCap size={14} />
+                  <span>{poster.education}</span>
+                </div>
+              )}
+
+              {/* Social Links */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-5)' }}>
+                {poster?.github && <a href={poster.github} target="_blank" rel="noopener noreferrer" className="btn-icon" title="GitHub"><ExternalLink size={16} /></a>}
+                {poster?.linkedin && <a href={poster.linkedin} target="_blank" rel="noopener noreferrer" className="btn-icon" title="LinkedIn"><ExternalLink size={16} /></a>}
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                {!isOwner && (
+                  <Link to={`/user/chats/${poster?._id}`} className="btn-primary-custom btn-block">
+                    <MessageSquare size={16} /> Contact
+                  </Link>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main>
+            <div className="card-custom" style={{ marginBottom: 'var(--space-6)' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+                <h1 style={{ fontSize: 'var(--text-2xl)', margin: 0, flex: 1 }}>{jobPost?.jobTitle}</h1>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>₹{jobPost?.jobRate}</p>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: 0 }}>Fixed price</p>
+                  <span className={`badge-custom ${stateStyle[jobPost?.state]}`} style={{ marginTop: 'var(--space-2)' }}>
+                    {stateMap[jobPost?.state]}
+                  </span>
+                </div>
+              </div>
+
+              {/* Images */}
+              {jobPost?.jobImages?.length > 0 && (
+                <div style={{ marginBottom: 'var(--space-6)' }}>
+                  <ImgCarousel jobPostData={jobPost} height="320px" />
+                </div>
+              )}
+
+              {/* Description */}
+              <div style={{ marginBottom: 'var(--space-6)' }}>
+                <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-3)' }}>Description</h3>
+                <p style={{ lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{jobPost?.jobDescription}</p>
+              </div>
+
+              {/* Skills */}
+              {jobPost?.jobSkills?.length > 0 && (
+                <div style={{ marginBottom: 'var(--space-6)' }}>
+                  <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-3)' }}>Skills Required</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                    {jobPost.jobSkills.map((skill, i) => (
+                      <span key={i} className="badge-custom badge-neutral">{skill}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              {!isOwner && (
+                <button
+                  className={`${btn.variant} btn-block btn-lg`}
+                  disabled={btn.disabled || actionLoading}
+                  onClick={handleRequestTask}
+                >
+                  {actionLoading ? <Loader2 size={18} className="spinning" /> : btn.text}
+                </button>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default JobDetails
+// Inject styles
+const jobDetailStyles = `
+.job-detail-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+.job-poster-card {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-6));
+}
+@media (max-width: 768px) {
+  .job-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .job-poster-card { position: static; }
+}
+`;
+if (typeof document !== 'undefined') {
+  const s = document.createElement('style');
+  s.textContent = jobDetailStyles;
+  document.head.appendChild(s);
+}
+
+export default JobDetails;

@@ -1,95 +1,68 @@
-import React, { useEffect, useState } from 'react'
-import UserAvatar from '../../components/avatar/UserAvatar'
-import { Button, Spinner } from 'react-bootstrap'
-import './activity.css'
-import { Link } from 'react-router-dom'
-import ViewApplicants from './ViewApplicants'
-import { getCurrentUserProject } from './activityApis'
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { getCurrentUserJobPostsAPI } from '../../services/allApis';
+import ViewApplicants from './ViewApplicants';
+import { Eye, Briefcase, Plus } from 'lucide-react';
 
 function MyJobPosts() {
+  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState([]);
 
-    const [loadingJobPosts, setLoadingJobPosts] = useState(true);
-    const [myJobPosts, setMyjobPosts] = useState([])
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await getCurrentUserJobPostsAPI();
+        setPosts(res.data?.posts || res.data || []);
+      } catch (err) { /* handled */ }
+      finally { setLoading(false); }
+    };
+    fetchPosts();
+  }, []);
 
-    const handlePageLoadData = async()=>{
-        try {
+  const stateMap = { 0: 'Open', 1: 'In Progress', 2: 'Closed' };
+  const stateStyle = { 0: 'badge-success', 1: 'badge-info', 2: 'badge-danger' };
 
-            const token = sessionStorage.getItem("token")
-            if(token){
-                /* create request header */
-                var reqHeader = {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` /* send token back as authorization */
-                }
-            }
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: '80px' }}></div>)}
+      </div>
+    );
+  }
 
-            //   console.log(" token", token, userId);
-
-            const response = await getCurrentUserProject(reqHeader)
-            setMyjobPosts(response.data)
-            console.log("uSers Jpob Posts", response.data);
- 
-        } catch (error) {
-            console.error('Error fetching other data:', error);
-        } finally {
-            setLoadingJobPosts(false);
-        }
-
-    }
-
-    useEffect(()=>{
-        handlePageLoadData()
-    }, [])
+  if (posts.length === 0) {
+    return (
+      <div className="empty-state">
+        <Briefcase size={48} className="empty-state-icon" />
+        <h3 className="empty-state-title">No job posts yet</h3>
+        <p className="empty-state-text">Create your first job listing to find talent</p>
+        <Link to="/jobs/addjobs" className="btn-primary-custom" style={{ marginTop: 'var(--space-4)' }}>
+          <Plus size={16} /> Post a Job
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <React.Fragment>
-
-      {/* <UserAvatar/> userData, heightxwidth, fontSize */}
-        {
-            loadingJobPosts ?(
-                <div className='d-flex justify-content-center align-items-center' style={{height: '60vh'}}> 
-                    <div style={{width: '10em', height: '10em'}}>
-                        <Spinner animation="border" variant="primary" className='me-4 w-100 h-100'/>
-                        <p className='fs-1'>Loading...</p>
-                    </div>
-                </div>
-            ):(
-
-            // {
-                myJobPosts.map((data, index) =>(
-                    <div className='d-flex mb-3 border rounded'>
-                        <div className='bg-success-subtle p-2' style={{width: '100px'}}>
-                            <p className='fs-5 fw-bold text-center'>Job No</p>
-                            <p className='m-0 fs-5 fw-bold text-center'>{index + 1}</p>
-                        </div>
-                        <div className='w-100'>
-                            <Link to={`/job/view/jobdetail/${data._id}`} style={{textDecoration: 'none', color: 'inherit'}}>
-                                <div className='p-2 jobpost-tile'>
-                                    <p style={{fontSize: '28px', fontWeight: '500'}} className='m-0'>{data.jobTitle}</p>
-                                </div>
-                            </Link>
-                
-                            <div className='d-flex justify-content-start align-items-center p-2'>
-                                <Link to={`/job/view/jobdetail/${data._id}`}>
-                                    <Button variant="primary" className='me-2' size="sm">View Job</Button>{' '}
-                                </Link>
-
-                                <ViewApplicants jobPostId={data._id} jobState={data.state}/>
-                            </div>
-                        </div>
-                    </div>
-                ))
-                
-            // }
-
-            )
-            
-}
-      {/* <div className='d-flex border align-items-center justify-content-center w-100'>
-        <h2>No Job Posts Yet</h2>
-      </div> */}
-    </React.Fragment>
-  )
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      {posts.map((post, idx) => (
+        <div key={post._id} className="card-custom" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)', padding: 'var(--space-4) var(--space-6)' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <Link to={`/job/view/jobdetail/${post._id}`} style={{ textDecoration: 'none' }}>
+              <h3 style={{ fontSize: 'var(--text-base)', margin: 0, marginBottom: 'var(--space-1)' }}>{post.jobTitle}</h3>
+            </Link>
+            <span className={`badge-custom ${stateStyle[post.state]}`}>{stateMap[post.state]}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <Link to={`/job/view/jobdetail/${post._id}`} className="btn-ghost btn-sm">
+              <Eye size={14} /> View
+            </Link>
+            <ViewApplicants jobPostId={post._id} jobState={post.state} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export default MyJobPosts
+export default MyJobPosts;
