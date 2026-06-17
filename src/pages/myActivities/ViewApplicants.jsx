@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getRequestedUsersAPI, updateRequestAPI } from '../../services/allApis';
 import UserAvatar from '../../components/avatar/UserAvatar';
@@ -10,14 +10,16 @@ function ViewApplicants({ jobPostId, jobState }) {
   const [loading, setLoading] = useState(false);
   const [applicants, setApplicants] = useState([]);
 
-  const fetchApplicants = async () => {
+  const fetchApplicants = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getRequestedUsersAPI(jobPostId);
       setApplicants(res.data?.applicants || res.data || []);
-    } catch (err) { /* silent */ }
-    finally { setLoading(false); }
-  };
+    } catch (err) {
+    } finally {
+      setLoading(false);
+    }
+  }, [jobPostId]);
 
   useEffect(() => {
     if (isOpen) fetchApplicants();
